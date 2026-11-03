@@ -1,0 +1,6 @@
+daily
+marcos: pipeline de ingestão quebrou ontem a noite, timeout na API do fornecedor. colocou retry, rodou ok
+bia: terminou testes do modelo de churn, AUC 0.81. falta validar com negócio
+lucas travado, sem acesso ao bucket de prod. abrir chamado
+combinado q deploy do churn só depois da validação
+alguem precisa revisar PR do marcos

@@ -1,0 +1,12 @@
+reuniao kickoff cliente Loja Verde - 28/10
+presentes: Ana (PM), JP, Carla (cliente), Rui (TI cliente)
+
+- carla quer dashboard de vendas por loja, hoje fazem tudo em planilha, 3 dias pra fechar o mes
+- fonte: ERP deles (Postgres) + planilha de metas no drive
+- rui disse q o acesso ao banco precisa de VPN, ele libera até sexta
+- decidido: começar só com vendas, estoque fica p/ fase 2
+- JP monta modelo de dados primeira versão, semana q vem
+- ana manda cronograma pro cliente
+- duvida: metas mudam todo mes? quem atualiza a planilha? carla vai ver internamente
+- ferramenta: cliente ja tem licença Power BI, vamos usar isso
+- prox reuniao 04/11

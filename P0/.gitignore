@@ -1,0 +1,11 @@
+# Credenciais
+.env
+
+# Ambiente e caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Atas geradas
+saidas/

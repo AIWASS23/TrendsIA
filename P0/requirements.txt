@@ -1,0 +1,5 @@
+# Dependências de execução, com versões fixas para reprodutibilidade.
+google-genai==2.34.0
+httpx==0.28.1
+pydantic==2.14.2
+python-dotenv==1.2.4

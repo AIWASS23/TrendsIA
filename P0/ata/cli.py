@@ -1,0 +1,91 @@
+"""Interface de linha de comando.
+
+Exemplos:
+    python -m ata exemplos/reuniao_cliente.txt
+    python -m ata exemplos/reuniao_cliente.txt --formato json --saida ata.json
+    cat anotacoes.txt | python -m ata -
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from pathlib import Path
+
+from ata import __version__
+from ata.config import carregar_config
+from ata.erros import ErroAta, ErroEntrada
+from ata.formatadores import FORMATADORES
+from ata.llm import gerar_ata
+
+
+def criar_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ata",
+        description="Transforma anotações livres de reunião em uma ata organizada usando um LLM.",
+    )
+    parser.add_argument(
+        "entrada",
+        help="arquivo de texto com as anotações, ou '-' para ler da entrada padrão",
+    )
+    parser.add_argument(
+        "-f", "--formato", choices=sorted(FORMATADORES), default="markdown", help="formato da saída (padrão: markdown)"
+    )
+    parser.add_argument("-o", "--saida", type=Path, help="grava a ata neste arquivo em vez de imprimir na tela")
+    parser.add_argument("-v", "--verbose", action="store_true", help="mostra detalhes da chamada à API")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    return parser
+
+
+def ler_entrada(origem: str, limite: int) -> str:
+    if origem == "-":
+        texto = sys.stdin.read()
+    else:
+        caminho = Path(origem)
+        if not caminho.is_file():
+            raise ErroEntrada(f"Arquivo não encontrado: {origem}")
+        try:
+            texto = caminho.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            raise ErroEntrada(f"O arquivo {origem} não está em UTF-8. Salve-o como UTF-8 e tente de novo.") from None
+
+    texto = texto.strip()
+    if not texto:
+        raise ErroEntrada("O texto de entrada está vazio.")
+    if len(texto) > limite:
+        # Não cortamos o texto em silêncio: uma ata parcial seria enganosa.
+        raise ErroEntrada(
+            f"O texto tem {len(texto)} caracteres; o limite é {limite}. "
+            "Divida as anotações ou ajuste ATA_LIMITE_CARACTERES."
+        )
+    return texto
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = criar_parser().parse_args(argv)
+    logging.basicConfig(
+        level=logging.INFO if args.verbose else logging.WARNING,
+        format="[%(levelname)s] %(message)s",
+        stream=sys.stderr,
+    )
+
+    try:
+        config = carregar_config()
+        anotacoes = ler_entrada(args.entrada, config.limite_caracteres)
+        ata = gerar_ata(anotacoes, config)
+        resultado = FORMATADORES[args.formato](ata)
+    except ErroAta as erro:
+        print(f"Erro: {erro}", file=sys.stderr)
+        return erro.codigo_saida
+    except KeyboardInterrupt:
+        print("\nInterrompido.", file=sys.stderr)
+        return 130
+
+    if args.saida:
+        args.saida.parent.mkdir(parents=True, exist_ok=True)
+        args.saida.write_text(resultado, encoding="utf-8")
+        print(f"Ata gravada em {args.saida}", file=sys.stderr)
+    else:
+        sys.stdout.write(resultado)
+    return 0
