@@ -40,11 +40,19 @@ saída é texto livre em Markdown, sem garantia de formato; tudo num arquivo só
 **Objetivo:** outra pessoa consegue instalar, configurar, executar e verificar.
 
 - [x] Dependências com versão fixa em `requirements.txt` e
-      `requirements-dev.txt`.
+      `requirements-dev.txt`; Python 3.11+ (testado com 3.12.3) documentado.
 - [x] `.env.example` documenta todas as variáveis; `.env` está no `.gitignore`.
-- [x] 45 testes automatizados que rodam **sem chave e sem rede**
-      (`tests/`), incluindo um teste que passa pelo SDK real com um transporte
-      HTTP falso.
+- [x] Parâmetros do modelo (modelo, raciocínio, tokens, timeout, limite de
+      entrada) alteráveis por variáveis de ambiente, sem mexer no código.
+- [x] `llm.py` separado em preparação, chamada e interpretação da resposta.
+- [x] Registros com `--verbose`: parâmetros, status HTTP, novas tentativas,
+      tokens, tempo e motivo de parada, sem chave nem texto das anotações.
+- [x] 51 testes automatizados que rodam **sem chave e sem rede**
+      (`tests/`), incluindo dois que passam pelo SDK real com um transporte
+      HTTP falso (um deles simula a credencial inválida da CLI até o SDK).
+- [x] Testes reais documentados no README e no relatório.
+- [x] Validação em ambiente limpo (venv novo seguindo só o README).
 - [x] Exemplos de entrada em `exemplos/`.
-- [x] README com instalação, configuração, uso, testes, estrutura, decisões e
-      limitações.
+- [x] README com problema, público, justificativa, limites, instalação,
+      configuração, execução, exemplos, testes, registros e limitações.
+- [x] [RELATORIO_EXECUCAO.md](../RELATORIO_EXECUCAO.md).
