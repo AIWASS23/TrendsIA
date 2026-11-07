@@ -3,7 +3,7 @@ import pytest
 from google.genai import errors, types
 
 from ata.config import Config
-from ata.erros import ErroLLM
+from ata.erros import ErroConfiguracao, ErroLLM
 from ata.esquema import Ata
 from ata.llm import gerar_ata, montar_configuracao
 from conftest import ClienteFalso, resposta_falsa
@@ -74,19 +74,37 @@ def test_json_fora_do_schema(config, texto):
 
 
 @pytest.mark.parametrize(
-    ("excecao", "trecho"),
+    ("excecao", "classe", "trecho"),
     [
         (erro_api(errors.ClientError, 400, "API key not valid. Please pass a valid API key.", "INVALID_ARGUMENT"),
-         "Chave de API inválida"),
-        (erro_api(errors.ClientError, 403, "Permission denied", "PERMISSION_DENIED"), "Chave de API inválida"),
-        (erro_api(errors.ClientError, 404, "models/x is not found", "NOT_FOUND"), "Modelo não encontrado"),
-        (erro_api(errors.ClientError, 429, "Quota exceeded", "RESOURCE_EXHAUSTED"), "Limite de requisições"),
-        (erro_api(errors.ClientError, 400, "Invalid JSON schema", "INVALID_ARGUMENT"), "recusou a requisição"),
-        (erro_api(errors.ServerError, 503, "Overloaded", "UNAVAILABLE"), "Instabilidade"),
-        (httpx.ReadTimeout("timeout"), "não respondeu"),
-        (httpx.ConnectError("sem rede"), "Sem conexão"),
+         ErroConfiguracao, "Chave de API inválida"),
+        (erro_api(errors.ClientError, 403, "Permission denied", "PERMISSION_DENIED"),
+         ErroConfiguracao, "Chave de API inválida"),
+        (erro_api(errors.ClientError, 404, "models/x is not found", "NOT_FOUND"),
+         ErroConfiguracao, "Modelo não encontrado"),
+        (erro_api(errors.ClientError, 429, "Quota exceeded", "RESOURCE_EXHAUSTED"), ErroLLM, "Limite de requisições"),
+        (erro_api(errors.ClientError, 400, "Invalid JSON schema", "INVALID_ARGUMENT"), ErroLLM, "recusou a requisição"),
+        (erro_api(errors.ServerError, 503, "Overloaded", "UNAVAILABLE"), ErroLLM, "Instabilidade"),
+        (httpx.ReadTimeout("timeout"), ErroLLM, "não respondeu"),
+        (httpx.ConnectError("sem rede"), ErroLLM, "Sem conexão"),
     ],
 )
-def test_erros_da_api_viram_mensagens_amigaveis(config, excecao, trecho):
-    with pytest.raises(ErroLLM, match=trecho):
+def test_erros_da_api_viram_mensagens_amigaveis(config, excecao, classe, trecho):
+    with pytest.raises(classe, match=trecho):
         gerar_ata("x", config, ClienteFalso(excecao))
+
+
+def test_timeout_fracionario_aparece_na_mensagem():
+    # Falha real encontrada: com ATA_TIMEOUT=0.05 a mensagem dizia "0 s".
+    with pytest.raises(ErroLLM, match="0.05 s"):
+        gerar_ata("x", Config(api_key="k", timeout_s=0.05), ClienteFalso(httpx.ConnectTimeout("timeout")))
+
+
+def test_chave_repetida_pelo_servidor_e_ocultada():
+    config = Config(api_key="AIza-segredo")
+    erro = erro_api(errors.ClientError, 400, "API key not valid: AIza-segredo", "INVALID_ARGUMENT")
+    with pytest.raises(ErroConfiguracao) as capturado:
+        gerar_ata("x", config, ClienteFalso(erro))
+    assert "AIza-segredo" not in str(capturado.value)
+    assert "***" in str(capturado.value)
+

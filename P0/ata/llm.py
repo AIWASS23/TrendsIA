@@ -14,7 +14,7 @@ from google import genai
 from google.genai import errors, types
 
 from ata.config import Config
-from ata.erros import ErroLLM
+from ata.erros import ErroAta, ErroConfiguracao, ErroLLM
 from ata.esquema import Ata
 from ata.prompts import PROMPT_SISTEMA, montar_mensagem_usuario
 
@@ -38,7 +38,7 @@ def criar_cliente(config: Config) -> genai.Client:
     return genai.Client(
         api_key=config.api_key,
         http_options=types.HttpOptions(
-            timeout=int(config.timeout_s * 1000),  # o SDK espera milissegundos
+            timeout=max(1, round(config.timeout_s * 1000)),  # o SDK espera milissegundos
             retry_options=types.HttpRetryOptions(attempts=TENTATIVAS),
         ),
     )
@@ -64,7 +64,8 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
     `cliente` pode ser injetado (útil nos testes); se omitido, é criado a partir
     da configuração.
 
-    Levanta `ErroLLM` com uma mensagem amigável para qualquer falha da API ou
+    Levanta `ErroConfiguracao` quando a API recusa a chave ou o modelo, e
+    `ErroLLM` com uma mensagem amigável para as demais falhas da API ou
     resposta inutilizável.
     """
     cliente = cliente or criar_cliente(config)
@@ -77,14 +78,20 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
             config=montar_configuracao(config),
         )
     except errors.ClientError as erro:
-        raise ErroLLM(_mensagem_erro_cliente(erro, config)) from None
+        raise _traduzir_erro_cliente(erro, config) from None
     except errors.ServerError as erro:
-        raise ErroLLM(f"Instabilidade na API do Gemini (HTTP {erro.code}). Tente de novo em alguns minutos.") from None
+        raise ErroLLM(
+            f"Instabilidade na API do Gemini (HTTP {erro.code}), mesmo após {TENTATIVAS} tentativas. "
+            "Tente de novo em alguns minutos."
+        ) from None
     except errors.APIError as erro:
-        raise ErroLLM(f"Erro da API do Gemini (HTTP {erro.code}): {erro.message}") from None
+        raise ErroLLM(f"Erro da API do Gemini (HTTP {erro.code}): {_sem_chave(erro.message, config)}") from None
     except httpx.TimeoutException:
         # Precisa vir antes de TransportError, que é a classe-mãe.
-        raise ErroLLM(f"A API não respondeu em {config.timeout_s:.0f} s. Tente aumentar ATA_TIMEOUT.") from None
+        raise ErroLLM(
+            f"A API não respondeu em {config.timeout_s:g} s (em {TENTATIVAS} tentativas). "
+            "Tente aumentar ATA_TIMEOUT."
+        ) from None
     except httpx.TransportError:
         raise ErroLLM("Sem conexão com a API. Verifique a internet e tente de novo.") from None
 
@@ -120,16 +127,28 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
         raise ErroLLM("O Gemini devolveu uma resposta fora do formato esperado. Tente novamente.") from None
 
 
-def _mensagem_erro_cliente(erro: errors.ClientError, config: Config) -> str:
-    """Traduz erros 4xx em mensagens que dizem o que fazer."""
-    detalhe = erro.message or ""
+def _traduzir_erro_cliente(erro: errors.ClientError, config: Config) -> ErroAta:
+    """Traduz erros 4xx em exceções com mensagens que dizem o que fazer.
+
+    Chave recusada e modelo inexistente se resolvem corrigindo o `.env`, por
+    isso viram `ErroConfiguracao` (código de saída 3). O resto é `ErroLLM`.
+    """
+    detalhe = _sem_chave(erro.message, config)
     if erro.code in (401, 403) or "API key" in detalhe:
-        return f"Chave de API inválida ou sem permissão (HTTP {erro.code}: {detalhe}). Confira GEMINI_API_KEY."
+        return ErroConfiguracao(
+            f"Chave de API inválida ou sem permissão (HTTP {erro.code}: {detalhe}). Confira GEMINI_API_KEY."
+        )
     if erro.code == 404:
-        return f"Modelo não encontrado: {config.modelo!r}. Confira ATA_MODELO."
+        return ErroConfiguracao(f"Modelo não encontrado: {config.modelo!r}. Confira ATA_MODELO.")
     if erro.code == 429:
-        return "Limite de requisições ou cota esgotada, mesmo após novas tentativas. Aguarde e tente de novo."
-    return f"A API recusou a requisição (HTTP {erro.code}): {detalhe}"
+        return ErroLLM("Limite de requisições ou cota esgotada, mesmo após novas tentativas. Aguarde e tente de novo.")
+    return ErroLLM(f"A API recusou a requisição (HTTP {erro.code}): {detalhe}")
+
+
+def _sem_chave(mensagem: str | None, config: Config) -> str:
+    """Remove a chave de API, caso a mensagem do servidor a repita."""
+    mensagem = mensagem or ""
+    return mensagem.replace(config.api_key, "***") if config.api_key else mensagem
 
 
 def _nome(valor) -> str:

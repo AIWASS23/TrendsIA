@@ -49,6 +49,8 @@ def ler_entrada(origem: str, limite: int) -> str:
             texto = caminho.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             raise ErroEntrada(f"O arquivo {origem} não está em UTF-8. Salve-o como UTF-8 e tente de novo.") from None
+        except OSError as erro:
+            raise ErroEntrada(f"Não foi possível ler {origem}: {erro.strerror}.") from None
 
     texto = texto.strip()
     if not texto:
@@ -60,6 +62,25 @@ def ler_entrada(origem: str, limite: int) -> str:
             "Divida as anotações ou ajuste ATA_LIMITE_CARACTERES."
         )
     return texto
+
+
+def apresentar_resultado(resultado: str, destino: Path | None) -> int:
+    """Imprime a ata ou grava em arquivo. Se a gravação falhar, a ata vai para a tela.
+
+    Assim a resposta do LLM (que já consumiu cota) não se perde.
+    """
+    if destino is None:
+        sys.stdout.write(resultado)
+        return 0
+    try:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(resultado, encoding="utf-8")
+    except OSError as erro:
+        print(f"Erro: não foi possível gravar em {destino} ({erro.strerror}). A ata segue abaixo.", file=sys.stderr)
+        sys.stdout.write(resultado)
+        return 1
+    print(f"Ata gravada em {destino}", file=sys.stderr)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,10 +103,4 @@ def main(argv: list[str] | None = None) -> int:
         print("\nInterrompido.", file=sys.stderr)
         return 130
 
-    if args.saida:
-        args.saida.parent.mkdir(parents=True, exist_ok=True)
-        args.saida.write_text(resultado, encoding="utf-8")
-        print(f"Ata gravada em {args.saida}", file=sys.stderr)
-    else:
-        sys.stdout.write(resultado)
-    return 0
+    return apresentar_resultado(resultado, args.saida)
