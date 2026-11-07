@@ -92,3 +92,10 @@ def test_credencial_invalida_sai_com_codigo_de_configuracao(monkeypatch, config,
     assert cli.main([str(anotacoes)]) == 3
     assert "Chave de API inválida" in capsys.readouterr().err
 
+
+def test_falha_ao_gravar_mostra_a_ata_na_tela(sem_api, anotacoes, tmp_path, capsys):
+    # O destino é uma pasta: a gravação falha, mas a ata (que já custou uma chamada) não se perde.
+    assert cli.main([str(anotacoes), "--saida", str(tmp_path)]) == 1
+    saida = capsys.readouterr()
+    assert "não foi possível gravar" in saida.err
+    assert "# Kickoff Loja Verde" in saida.out
