@@ -2,6 +2,11 @@
 
 Este é o único módulo que conhece a API. O restante do programa só vê a função
 `gerar_ata` e as exceções de `ata.erros`.
+
+Responsabilidades separadas em funções:
+- `montar_configuracao`: preparação da solicitação (parâmetros da geração);
+- `chamar_modelo`: chamada à API e tradução dos erros de comunicação;
+- `interpretar_resposta`: conferência e validação da resposta recebida.
 """
 
 from __future__ import annotations
@@ -69,7 +74,12 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
     resposta inutilizável.
     """
     cliente = cliente or criar_cliente(config)
+    resposta = chamar_modelo(cliente, anotacoes, config)
+    return interpretar_resposta(resposta)
 
+
+def chamar_modelo(cliente: genai.Client, anotacoes: str, config: Config) -> types.GenerateContentResponse:
+    """Faz a chamada à API. Erros de autenticação, rede e servidor viram exceções da aplicação."""
     log.info("Enviando %d caracteres ao modelo %s", len(anotacoes), config.modelo)
     try:
         resposta = cliente.models.generate_content(
@@ -104,7 +114,11 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
         uso.thoughts_token_count if uso else None,
         resposta.response_id,
     )
+    return resposta
 
+
+def interpretar_resposta(resposta: types.GenerateContentResponse) -> Ata:
+    """Confere bloqueios e o motivo de parada, e valida o JSON no formato da ata."""
     # Conferir bloqueios e o motivo de parada antes de usar o conteúdo.
     if resposta.prompt_feedback and resposta.prompt_feedback.block_reason:
         raise ErroLLM(f"O Gemini bloqueou o texto de entrada ({_nome(resposta.prompt_feedback.block_reason)}).")
