@@ -37,7 +37,8 @@ responsáveis, prazos ou datas.
 
 ## Requisitos
 
-- Python 3.10 ou superior.
+- Python 3.11 ou superior (testado com 3.12.3). O SDK `google-genai` 2.34.0
+  não instala em Python 3.10.
 - Uma chave de API do Gemini, criada no
   [Google AI Studio](https://aistudio.google.com/apikey). O uso consome a cota
   (ou os créditos) da conta.
@@ -104,10 +105,10 @@ python basico/ata_basica.py exemplos/reuniao_cliente.txt
 | Código | Significado |
 | --- | --- |
 | 0 | Sucesso |
-| 1 | Problema na entrada (arquivo inexistente, vazio, fora de UTF-8 ou grande demais) |
+| 1 | Problema na entrada (arquivo inexistente, vazio, fora de UTF-8 ou grande demais) ou falha ao gravar a saída |
 | 2 | Uso incorreto da linha de comando |
-| 3 | Configuração ausente ou inválida |
-| 4 | Falha na API ou resposta inutilizável |
+| 3 | Configuração ausente ou inválida: chave ausente, chave recusada pela API, modelo inexistente, valor inválido em `ATA_*` |
+| 4 | Falha na API ou resposta inutilizável: timeout, sem conexão, instabilidade, cota esgotada, bloqueio, resposta cortada ou fora do formato |
 
 ## Testes
 
