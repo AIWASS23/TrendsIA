@@ -4,7 +4,7 @@ import json
 import pytest
 
 from ata import cli
-from ata.erros import ErroLLM
+from ata.erros import ErroConfiguracao, ErroLLM
 
 
 @pytest.fixture
@@ -81,3 +81,14 @@ def test_erro_do_llm(monkeypatch, config, anotacoes, capsys):
     saida = capsys.readouterr()
     assert "Sem conexão" in saida.err
     assert "Traceback" not in saida.err
+
+
+def test_credencial_invalida_sai_com_codigo_de_configuracao(monkeypatch, config, anotacoes, capsys):
+    def recusa(texto, cfg):
+        raise ErroConfiguracao("Chave de API inválida ou sem permissão (HTTP 400). Confira GEMINI_API_KEY.")
+
+    monkeypatch.setattr(cli, "carregar_config", lambda: config)
+    monkeypatch.setattr(cli, "gerar_ata", recusa)
+    assert cli.main([str(anotacoes)]) == 3
+    assert "Chave de API inválida" in capsys.readouterr().err
+

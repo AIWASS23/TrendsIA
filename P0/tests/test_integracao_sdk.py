@@ -66,3 +66,41 @@ def test_requisicao_e_resposta_pelo_sdk(config):
     assert geracao["responseMimeType"] == "application/json"
     assert geracao["maxOutputTokens"] == config.max_tokens
     assert set(geracao["responseJsonSchema"]["required"]) == set(Ata.model_fields)
+
+
+def test_credencial_invalida_ponta_a_ponta(monkeypatch, tmp_path, capsys):
+    """Da linha de comando até o SDK real: a API recusa a chave (HTTP 400).
+
+    Simula a resposta que o Gemini devolve para uma chave inválida, sem rede.
+    O programa deve sair com código 3, explicar o problema e não exibir a chave.
+    """
+    from ata import cli, llm
+
+    def recusar_chave(requisicao: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={
+                "error": {
+                    "code": 400,
+                    "message": "API key not valid. Please pass a valid API key.",
+                    "status": "INVALID_ARGUMENT",
+                }
+            },
+        )
+
+    def cliente_falso(config):
+        return genai.Client(
+            api_key=config.api_key,
+            http_options=types.HttpOptions(httpx_client=httpx.Client(transport=httpx.MockTransport(recusar_chave))),
+        )
+
+    monkeypatch.setenv("GEMINI_API_KEY", "AIza-chave-revogada")
+    monkeypatch.setattr(llm, "criar_cliente", cliente_falso)
+    notas = tmp_path / "notas.txt"
+    notas.write_text("reunião rápida", encoding="utf-8")
+
+    assert cli.main([str(notas)]) == 3
+    saida = capsys.readouterr()
+    assert "Chave de API inválida" in saida.err
+    assert "AIza-chave-revogada" not in saida.err + saida.out
+    assert "Traceback" not in saida.err
