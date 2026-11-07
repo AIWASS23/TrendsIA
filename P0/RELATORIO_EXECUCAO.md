@@ -127,17 +127,27 @@ e `dev/p0-avancado` (tag `p0-avancado`).
 
 | Ferramenta | Tarefa delegada | Resultado aproveitado | Correções ou alterações | Verificação |
 | --- | --- | --- | --- | --- |
-| Claude Code (Claude Opus 5.5), 07/11/2026 | Comparar o P0 com o enunciado e listar o que faltava | Lista de lacunas: `RELATORIO_EXECUCAO.md` ausente, sem link do vídeo, versão do Python errada, testes reais não documentados, histórico com 1 commit e sem PR | PREENCHER | Conferência item a item com o enunciado |
+| Gemini (ferramenta indicada pelo curso), antes de 07/11/2026 | Apoio no desenvolvimento do código inicial: pacote `ata/`, testes e README (commit `b52894f`) | Trechos incorporados ao código, aos testes e ao README do commit `b52894f` | Os testes reais de 07/11 revelaram três falhas nesse código: mensagem de timeout com "0 s", chave inválida com o mesmo código de saída de uma queda de rede e versão mínima do Python errada no README. As três foram corrigidas (ver Falhas e limitações) | 45 testes automatizados sem rede e execuções reais com o Gemini (R1 a R13) |
+| Claude Code (Claude Opus 5.5), 07/11/2026 | Comparar o P0 com o enunciado e listar o que faltava | Lista de lacunas: `RELATORIO_EXECUCAO.md` ausente, sem link do vídeo, versão do Python errada, testes reais não documentados, histórico com 1 commit e sem PR | Escolhi manter o histórico já publicado em vez de reescrevê-lo; o commit inicial único ficou registrado como limitação (falha 5) | Conferência item a item com o enunciado |
 | Claude Code | Dividir `llm.py` em preparação, chamada e interpretação; mensagens de erro; registros com tempo e parâmetros | Funções `chamar_modelo` e `interpretar_resposta`; códigos de saída de credencial e modelo; mensagem de timeout | A primeira versão da função que mascara a chave inseria `***` entre todas as letras quando a chave era vazia; corrigido com uma verificação antes do teste | 51 testes passando; cenários R1 a R13 executados de verdade |
-| Claude Code | Script local que confere os requisitos e cria as tags | Conferência dos requisitos por nível no conteúdo do commit, busca de chaves no histórico, testes em venv novo, criação e publicação da tag | Correção da lista de variáveis documentadas (a primeira versão não via as lidas por `_ler_numero`); mantido fora do repositório, por não fazer parte da aplicação | Executado com `--verificar` no commit `b52894f` e em um clone de teste |
+| Claude Code | Script local que confere os requisitos e cria as tags | Conferência dos requisitos por nível no conteúdo do commit, busca de chaves no histórico, testes em venv novo, criação e publicação da tag | Correção da lista de variáveis documentadas (a primeira versão não via as lidas por `_ler_numero`); retirado do repositório a meu pedido, por não fazer parte da aplicação | Executado com `--verificar` no commit `b52894f` e em um clone de teste |
 | Claude Code | Dividir as correções em commits pequenos nas branches `dev/p0-intermediario` e `dev/p0-avancado` | Sequência de commits por assunto, com os testes passando em cada commit | — | `pytest` executado após cada commit |
-| Claude Code | Rascunho do README e deste relatório a partir das execuções reais | Seções de público, justificativa, limites, testes reais e simulados, registros | PREENCHER | PREENCHER |
-| PREENCHER | Ferramentas usadas antes de 07/11/2026, no código inicial (commit `b52894f`), se houver | | | |
+| Claude Code | Rascunho do README e deste relatório, incluindo a reflexão final, a partir das execuções reais e das minhas respostas | Seções de público, justificativa, limites, testes reais e simulados, registros e reflexão | Pedi para tirar do README e do relatório as referências ao script de tags; indiquei a ferramenta usada antes de 07/11 e a competência mais desenvolvida | Números e resultados conferidos com as saídas reais do `pytest` e das execuções; texto revisado por mim antes de integrar o PR 2 |
 
 ## Reflexão final
 
-PREENCHER:
-
-- **Principal aprendizado:**
-- **Competência mais desenvolvida (C01 a C04):**
-- **Aspecto que ainda precisa ser aprimorado:**
+- **Principal aprendizado:** um programa que funciona na minha máquina ainda
+  não está pronto. Os 45 testes simulados passavam, mas os testes reais e a
+  validação em ambiente limpo encontraram três falhas: a mensagem de timeout
+  com "0 s", a chave inválida com o mesmo código de saída de uma queda de rede
+  e a versão mínima do Python errada no README.
+- **Competência mais desenvolvida:** C03, integração com serviços externos por
+  APIs REST. Tratar os erros exigiu separar o que o SDK já faz (novas
+  tentativas em timeout, conexão, 429 e 5xx) do que cabe ao programa:
+  distinguir chave recusada de falha de rede, conferir o motivo de parada e
+  validar o JSON antes de usar. O `503 high demand` recebido num teste real
+  mostrou na prática a diferença entre falha temporária e definitiva.
+- **Aspecto que ainda precisa ser aprimorado:** versionamento desde o início.
+  O primeiro commit reuniu os três níveis, e a evolução só ficou visível nas
+  branches seguintes. Nos próximos projetos, vou fazer commits e abrir pull
+  request a cada etapa.

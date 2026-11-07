@@ -7,7 +7,7 @@
 Aplicação de linha de comando em Python que usa o Gemini (Google) pela API
 oficial.
 
-- **Vídeo de demonstração:** PREENCHER: link do vídeo
+- **Vídeo de demonstração:** <https://youtu.be/_7Ez94ugmvY>
 - **Relatório de execução:** [RELATORIO_EXECUCAO.md](RELATORIO_EXECUCAO.md)
 - **Definição detalhada do problema:** [docs/problema.md](docs/problema.md)
 - **O que cada nível entregou:** [docs/niveis.md](docs/niveis.md)
