@@ -38,7 +38,7 @@ def criar_cliente(config: Config) -> genai.Client:
     return genai.Client(
         api_key=config.api_key,
         http_options=types.HttpOptions(
-            timeout=int(config.timeout_s * 1000),  # o SDK espera milissegundos
+            timeout=max(1, round(config.timeout_s * 1000)),  # o SDK espera milissegundos
             retry_options=types.HttpRetryOptions(attempts=TENTATIVAS),
         ),
     )
@@ -80,12 +80,18 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
     except errors.ClientError as erro:
         raise _traduzir_erro_cliente(erro, config) from None
     except errors.ServerError as erro:
-        raise ErroLLM(f"Instabilidade na API do Gemini (HTTP {erro.code}). Tente de novo em alguns minutos.") from None
+        raise ErroLLM(
+            f"Instabilidade na API do Gemini (HTTP {erro.code}), mesmo após {TENTATIVAS} tentativas. "
+            "Tente de novo em alguns minutos."
+        ) from None
     except errors.APIError as erro:
         raise ErroLLM(f"Erro da API do Gemini (HTTP {erro.code}): {_sem_chave(erro.message, config)}") from None
     except httpx.TimeoutException:
         # Precisa vir antes de TransportError, que é a classe-mãe.
-        raise ErroLLM(f"A API não respondeu em {config.timeout_s:.0f} s. Tente aumentar ATA_TIMEOUT.") from None
+        raise ErroLLM(
+            f"A API não respondeu em {config.timeout_s:g} s (em {TENTATIVAS} tentativas). "
+            "Tente aumentar ATA_TIMEOUT."
+        ) from None
     except httpx.TransportError:
         raise ErroLLM("Sem conexão com a API. Verifique a internet e tente de novo.") from None
 

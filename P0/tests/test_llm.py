@@ -94,6 +94,12 @@ def test_erros_da_api_viram_mensagens_amigaveis(config, excecao, classe, trecho)
         gerar_ata("x", config, ClienteFalso(excecao))
 
 
+def test_timeout_fracionario_aparece_na_mensagem():
+    # Falha real encontrada: com ATA_TIMEOUT=0.05 a mensagem dizia "0 s".
+    with pytest.raises(ErroLLM, match="0.05 s"):
+        gerar_ata("x", Config(api_key="k", timeout_s=0.05), ClienteFalso(httpx.ConnectTimeout("timeout")))
+
+
 def test_chave_repetida_pelo_servidor_e_ocultada():
     config = Config(api_key="AIza-segredo")
     erro = erro_api(errors.ClientError, 400, "API key not valid: AIza-segredo", "INVALID_ARGUMENT")
