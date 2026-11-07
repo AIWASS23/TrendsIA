@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 import pytest
 from google.genai import errors, types
@@ -108,3 +110,15 @@ def test_chave_repetida_pelo_servidor_e_ocultada():
     assert "AIza-segredo" not in str(capturado.value)
     assert "***" in str(capturado.value)
 
+
+def test_registros_sem_chave_e_sem_texto_das_anotacoes(ata_exemplo, caplog):
+    config = Config(api_key="AIza-segredo")
+    anotacoes = "cliente Fulano de Tal, CPF 123.456.789-00"
+    with caplog.at_level(logging.INFO):
+        gerar_ata(anotacoes, config, ClienteFalso(resposta_falsa(ata_exemplo.model_dump_json())))
+    assert "AIza-segredo" not in caplog.text
+    assert "Fulano" not in caplog.text
+    # Os registros trazem os metadados úteis para investigar a execução.
+    assert "modelo=gemini-3.5-flash-lite" in caplog.text
+    assert "tokens_entrada=100" in caplog.text
+    assert "Motivo de parada: STOP" in caplog.text

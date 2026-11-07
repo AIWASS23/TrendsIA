@@ -83,13 +83,21 @@ def apresentar_resultado(resultado: str, destino: Path | None) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = criar_parser().parse_args(argv)
+def configurar_registros(verbose: bool) -> None:
+    """Registros vão para stderr; com --verbose mostram as etapas da execução."""
     logging.basicConfig(
-        level=logging.INFO if args.verbose else logging.WARNING,
-        format="[%(levelname)s] %(message)s",
+        level=logging.INFO if verbose else logging.WARNING,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
         stream=sys.stderr,
     )
+    # Aviso interno do SDK sobre chamada automática de funções, que este programa não usa.
+    logging.getLogger("google_genai.models").setLevel(logging.WARNING)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = criar_parser().parse_args(argv)
+    configurar_registros(args.verbose)
 
     try:
         config = carregar_config()

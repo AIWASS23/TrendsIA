@@ -2,11 +2,17 @@
 
 Este é o único módulo que conhece a API. O restante do programa só vê a função
 `gerar_ata` e as exceções de `ata.erros`.
+
+Responsabilidades separadas em funções:
+- `montar_configuracao`: preparação da solicitação (parâmetros da geração);
+- `chamar_modelo`: chamada à API e tradução dos erros de comunicação;
+- `interpretar_resposta`: conferência e validação da resposta recebida.
 """
 
 from __future__ import annotations
 
 import logging
+import time
 
 import httpx
 import pydantic
@@ -69,8 +75,23 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
     resposta inutilizável.
     """
     cliente = cliente or criar_cliente(config)
+    resposta = chamar_modelo(cliente, anotacoes, config)
+    return interpretar_resposta(resposta)
 
-    log.info("Enviando %d caracteres ao modelo %s", len(anotacoes), config.modelo)
+
+def chamar_modelo(cliente: genai.Client, anotacoes: str, config: Config) -> types.GenerateContentResponse:
+    """Faz a chamada à API. Erros de autenticação, rede e servidor viram exceções da aplicação."""
+    # Os registros trazem só metadados: nunca a chave nem o texto das anotações.
+    log.info(
+        "Enviando %d caracteres: modelo=%s pensamento=%s max_tokens=%d timeout=%gs tentativas=%d",
+        len(anotacoes),
+        config.modelo,
+        config.pensamento,
+        config.max_tokens,
+        config.timeout_s,
+        TENTATIVAS,
+    )
+    inicio = time.monotonic()
     try:
         resposta = cliente.models.generate_content(
             model=config.modelo,
@@ -97,14 +118,19 @@ def gerar_ata(anotacoes: str, config: Config, cliente: genai.Client | None = Non
 
     uso = resposta.usage_metadata
     log.info(
-        "Resposta: modelo=%s tokens_entrada=%s tokens_saida=%s tokens_raciocinio=%s response_id=%s",
+        "Resposta em %.1f s: modelo=%s tokens_entrada=%s tokens_saida=%s tokens_raciocinio=%s response_id=%s",
+        time.monotonic() - inicio,
         resposta.model_version,
         uso.prompt_token_count if uso else None,
         uso.candidates_token_count if uso else None,
         uso.thoughts_token_count if uso else None,
         resposta.response_id,
     )
+    return resposta
 
+
+def interpretar_resposta(resposta: types.GenerateContentResponse) -> Ata:
+    """Confere bloqueios e o motivo de parada, e valida o JSON no formato da ata."""
     # Conferir bloqueios e o motivo de parada antes de usar o conteúdo.
     if resposta.prompt_feedback and resposta.prompt_feedback.block_reason:
         raise ErroLLM(f"O Gemini bloqueou o texto de entrada ({_nome(resposta.prompt_feedback.block_reason)}).")
