@@ -28,19 +28,29 @@ fictícias e na comparação com alternativas sem IA.
 
 ```text
 P1/
-├── MEMORANDO_TECNICO.md     # análise e recomendação
-├── prompts/                 # versões do prompt de triagem
-├── casos/casos_teste.json   # mensagens fictícias e resultado esperado
-├── resultados/              # execuções reais (JSONL), metadados e relatórios
-├── triagem/                 # script opcional que roda e avalia os prompts
-├── requirements.txt
+├── MEMORANDO_TECNICO.md       # análise e recomendação (principal artefato)
+├── prompts/                   # versões do prompt de triagem (v1, v2, v3)
+├── casos/casos_teste.json     # 15 mensagens fictícias com o resultado esperado
+├── resultados/
+│   ├── basico/                # v1 com 3 mensagens (nível Básico)
+│   ├── intermediario/         # regras, v1, v2 e v3 com 15 mensagens, 3 repetições
+│   └── intermediario_tentativa1/  # primeira rodada, com erros de limite da API (HTTP 429)
+├── triagem/                   # script opcional que roda e avalia os prompts
+├── tests/                     # testes do script, sem rede
+├── requirements.txt / requirements-dev.txt
 └── .env.example
 ```
 
+Cada pasta de `resultados/` tem `execucoes.jsonl` (respostas brutas do
+modelo), `metadados.json` (data, modelo, versões e hash dos prompts) e
+`relatorio.md` (tabelas e falhas para análise).
+
 ## Ferramentas
 
-- Gemini (`gemini-3.5-flash-lite`) pela API oficial, SDK `google-genai`.
-- Python 3.12 com `pydantic` (formato da resposta) e `python-dotenv`.
+- Gemini (`gemini-3.5-flash-lite`, raciocínio `minimal`) pela API oficial,
+  SDK `google-genai` 2.34.0.
+- Python 3.12 com `pydantic` (formato da resposta), `python-dotenv`, `pytest` e
+  `mypy`.
 
 ## Como reproduzir os testes
 
@@ -49,13 +59,33 @@ Na pasta `P1/`:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env               # preencha GEMINI_API_KEY
-python -m triagem executar --prompts v1 --casos T01 T05 T09 --repeticoes 3 --saida resultados/meu_teste
 ```
 
-O relatório fica em `resultados/meu_teste/relatorio.md`. As respostas do
-modelo variam entre execuções; os resultados usados no memorando estão em
-`resultados/basico/`.
+Comandos:
+
+```bash
+# Alternativa sem IA (sem rede e sem chave)
+python -m triagem executar --regras --saida resultados/meu_teste_regras
+
+# Prompts no Gemini: 15 casos x 3 versões x 3 repetições = 135 chamadas (~12 min)
+python -m triagem executar --regras --prompts v1 v2 v3 --repeticoes 3 --saida resultados/meu_teste
+
+# Só alguns casos
+python -m triagem executar --prompts v3 --casos T06 T11 --saida resultados/meu_teste_parcial
+
+# Refazer o relatório de uma pasta existente
+python -m triagem relatorio resultados/intermediario
+
+# Testes do script (sem rede) e checagem de tipos
+pytest
+mypy --strict triagem tests
+```
+
+As respostas do modelo variam entre execuções, então uma nova rodada pode
+dar números um pouco diferentes dos registrados em `resultados/`. No plano
+gratuito, a API aceita 15 chamadas por minuto; por isso o script espera 4 s
+entre chamadas (`P1_PAUSA`).
 
 Use só mensagens fictícias: os textos são enviados à API do Google.
