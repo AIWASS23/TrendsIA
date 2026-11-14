@@ -1,0 +1,22 @@
+{
+  "inicio": "2026-11-14T15:05:51-03:00",
+  "arquivo_casos": "casos/casos_teste.json",
+  "casos": [
+    "T01",
+    "T05",
+    "T09"
+  ],
+  "repeticoes": 3,
+  "classificadores": [
+    "llm-v1"
+  ],
+  "modelo": "gemini-3.5-flash-lite",
+  "pensamento": "minimal",
+  "prompts": {
+    "v1": {
+      "alteracao": "Versão inicial (nível Básico) com contexto, tarefa, instruções e formato. Categorias só pelo nome, sem definições nem critérios.",
+      "sha256": "e0df4c82e450ca3e"
+    }
+  },
+  "fim": "2026-11-14T15:06:12-03:00"
+}
