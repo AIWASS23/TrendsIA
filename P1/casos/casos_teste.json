@@ -1,0 +1,60 @@
+[
+  {
+    "id": "T01",
+    "tipo": "comum",
+    "descricao": "Dúvida simples sobre prazo de rematrícula",
+    "mensagem": "Oi, quero saber até quando posso fazer a rematrícula para o próximo semestre. Sou do curso de Administração EAD.",
+    "esperado": {
+      "assuntos_aceitos": [
+        "matricula",
+        "calendario_academico"
+      ],
+      "prioridades_aceitas": [
+        "baixa",
+        "media"
+      ],
+      "encaminhar_para_humano": false,
+      "solucao_recomendada": "Sem IA: resposta-padrão com o calendário publicado"
+    }
+  },
+  {
+    "id": "T05",
+    "tipo": "multiplos_assuntos",
+    "descricao": "Pagamento não baixado que bloqueia o histórico, mais dúvida de calendário",
+    "mensagem": "Paguei a mensalidade de outubro mas ainda aparece em aberto, e por isso não consigo baixar meu histórico. Também queria saber quando começam as provas finais.",
+    "esperado": {
+      "assuntos_aceitos": [
+        "pagamentos",
+        "documentos"
+      ],
+      "assuntos_obrigatorios": [
+        "pagamentos",
+        "documentos",
+        "calendario_academico"
+      ],
+      "prioridades_aceitas": [
+        "media",
+        "alta"
+      ],
+      "encaminhar_para_humano": false,
+      "solucao_recomendada": "IA com revisão humana: triagem sugere setores, atendente confirma"
+    }
+  },
+  {
+    "id": "T09",
+    "tipo": "decisao_alto_impacto",
+    "descricao": "Pedido de revisão de nota para evitar reprovação",
+    "mensagem": "Tirei 5,5 na prova de Estatística e acho que a questão 3 foi corrigida errado. Quero que revisem e aumentem minha nota para 6 para eu não reprovar.",
+    "esperado": {
+      "assuntos_aceitos": [
+        "revisao_de_notas"
+      ],
+      "prioridades_aceitas": [
+        "alta",
+        "media"
+      ],
+      "encaminhar_para_humano": true,
+      "solucao_recomendada": "Humano: coordenação do curso decide; sem IA na decisão"
+    }
+  }
+]
