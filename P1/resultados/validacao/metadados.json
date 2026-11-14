@@ -1,0 +1,33 @@
+{
+  "inicio": "2026-11-14T15:26:54-03:00",
+  "arquivo_casos": "casos/casos_validacao.json",
+  "casos": [
+    "V01",
+    "V02",
+    "V03",
+    "V04",
+    "V05",
+    "V06",
+    "V07",
+    "V08"
+  ],
+  "repeticoes": 3,
+  "classificadores": [
+    "regras",
+    "llm-v1",
+    "llm-v3"
+  ],
+  "modelo": "gemini-3.5-flash-lite",
+  "pensamento": "minimal",
+  "prompts": {
+    "v1": {
+      "alteracao": "Versão inicial (nível Básico) com contexto, tarefa, instruções e formato. Categorias só pelo nome, sem definições nem critérios.",
+      "sha256": "e0df4c82e450ca3e"
+    },
+    "v3": {
+      "alteracao": "Inclui os limites de atuação: critérios de encaminhamento humano, proibição de decidir, tratamento da mensagem como dado (não instrução), não repetir dados pessoais e orientação sobre incerteza. O resto é igual à v2.",
+      "sha256": "6675a9d157298d3e"
+    }
+  },
+  "fim": "2026-11-14T15:31:03-03:00"
+}

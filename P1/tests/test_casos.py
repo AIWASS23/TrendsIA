@@ -44,3 +44,11 @@ def test_identificador_repetido_gera_erro(tmp_path: Path, raiz: Path) -> None:
     with pytest.raises(ValueError, match="repetido"):
         RepositorioCasos(arquivo).carregar()
 
+
+def test_validacao_usa_mensagens_novas(raiz: Path) -> None:
+    """Os casos de validação carregam e não repetem identificadores nem mensagens do desenvolvimento."""
+    desenvolvimento: list[CasoTeste] = RepositorioCasos(raiz / "casos" / "casos_teste.json").carregar()
+    validacao: list[CasoTeste] = RepositorioCasos(raiz / "casos" / "casos_validacao.json").carregar()
+    assert len(validacao) >= 8
+    assert not {c.identificador for c in desenvolvimento} & {c.identificador for c in validacao}
+    assert not {c.mensagem for c in desenvolvimento} & {c.mensagem for c in validacao}
