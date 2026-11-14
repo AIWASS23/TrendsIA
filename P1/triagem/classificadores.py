@@ -42,7 +42,10 @@ class ClassificadorLLM(Classificador):
     mesmo em todas as versões. Só o texto do prompt muda entre elas.
     """
 
-    TENTATIVAS: ClassVar[int] = 3
+    # O plano gratuito do Gemini limita as requisições por minuto (HTTP 429 com "retry in ~20 s").
+    # Com espera inicial de 5 s e dobrando a cada tentativa (5, 10, 20, 40 s), a janela de 1 minuto é coberta.
+    TENTATIVAS: ClassVar[int] = 5
+    ESPERA_INICIAL_S: ClassVar[float] = 5.0
 
     def __init__(self, prompt: PromptVersao, configuracao: Configuracao, cliente: genai.Client | None = None) -> None:
         """Prepara o cliente da API; `cliente` pode ser injetado nos testes."""
@@ -64,7 +67,9 @@ class ClassificadorLLM(Classificador):
         """Cria o cliente com timeout e novas tentativas em falhas temporárias (429, 5xx, rede)."""
         opcoes: types.HttpOptions = types.HttpOptions(
             timeout=max(1, round(self.configuracao.timeout_s * 1000)),  # o SDK espera milissegundos
-            retry_options=types.HttpRetryOptions(attempts=self.TENTATIVAS),
+            retry_options=types.HttpRetryOptions(
+                attempts=self.TENTATIVAS, initial_delay=self.ESPERA_INICIAL_S, max_delay=60.0
+            ),
         )
         return genai.Client(api_key=self.configuracao.api_key, http_options=opcoes)
 

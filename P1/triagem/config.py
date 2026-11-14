@@ -22,7 +22,7 @@ class Configuracao:
     modelo: str = "gemini-3.5-flash-lite"
     pensamento: str = "minimal"
     timeout_s: float = 60.0
-    pausa_s: float = 1.0
+    pausa_s: float = 4.0  # plano gratuito: 15 requisições por minuto
 
     NIVEIS_PENSAMENTO: ClassVar[tuple[str, ...]] = ("minimal", "low", "medium", "high")
 
