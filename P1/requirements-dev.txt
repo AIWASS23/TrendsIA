@@ -1,0 +1,4 @@
+# Dependências de desenvolvimento (testes e checagem de tipos).
+-r requirements.txt
+pytest==9.2.0
+mypy==2.4.1
