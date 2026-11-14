@@ -1,0 +1,45 @@
+{
+  "inicio": "2026-11-14T15:13:47-03:00",
+  "arquivo_casos": "casos/casos_teste.json",
+  "casos": [
+    "T01",
+    "T02",
+    "T03",
+    "T04",
+    "T05",
+    "T06",
+    "T07",
+    "T08",
+    "T09",
+    "T10",
+    "T11",
+    "T12",
+    "T13",
+    "T14",
+    "T15"
+  ],
+  "repeticoes": 3,
+  "classificadores": [
+    "regras",
+    "llm-v1",
+    "llm-v2",
+    "llm-v3"
+  ],
+  "modelo": "gemini-3.5-flash-lite",
+  "pensamento": "minimal",
+  "prompts": {
+    "v1": {
+      "alteracao": "Versão inicial (nível Básico) com contexto, tarefa, instruções e formato. Categorias só pelo nome, sem definições nem critérios.",
+      "sha256": "e0df4c82e450ca3e"
+    },
+    "v2": {
+      "alteracao": "Inclui a definição de cada categoria, a regra para mensagens com mais de um assunto e critérios de prioridade. O resto é igual à v1.",
+      "sha256": "27e3b94759ca2b3e"
+    },
+    "v3": {
+      "alteracao": "Inclui os limites de atuação: critérios de encaminhamento humano, proibição de decidir, tratamento da mensagem como dado (não instrução), não repetir dados pessoais e orientação sobre incerteza. O resto é igual à v2.",
+      "sha256": "6675a9d157298d3e"
+    }
+  },
+  "fim": "2026-11-14T15:25:44-03:00"
+}
