@@ -1,0 +1,84 @@
+[
+  {
+    "id": "Q01",
+    "nivel": "basico",
+    "tipo": "direta",
+    "pergunta": "Qual é a idade mínima para participar do Programa Trilha Dados?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "18 anos completos na data de início das aulas (Edital, item 3).",
+    "fatos_obrigatorios": [
+      "18 anos|dezoito anos"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q03",
+    "nivel": "basico",
+    "tipo": "combinar",
+    "pergunta": "Sou pessoa com deficiência e quero concorrer às vagas reservadas. Quais documentos preciso enviar na inscrição?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Documento de identidade com foto (RG ou CNH), CPF, certificado ou declaração de conclusão do ensino médio, comprovante de residência dos últimos 3 meses e, para a reserva de vagas, laudo médico dos últimos 12 meses com o CID (Edital, itens 5.1 e 5.2).",
+    "fatos_obrigatorios": [
+      "\\bRG\\b|identidade|\\bCNH\\b",
+      "\\bCPF\\b",
+      "ensino médio",
+      "comprovante de (residência|endereço)",
+      "laudo",
+      "12 meses|doze meses",
+      "\\bCID\\b|Classificação Internacional de Doenças"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q05",
+    "nivel": "basico",
+    "tipo": "ausente",
+    "pergunta": "O certificado do Programa Trilha Dados é reconhecido pelo MEC?",
+    "situacao_esperada": "sem_informacao",
+    "resposta_referencia": "Os documentos não tratam de reconhecimento pelo MEC. O regulamento (item 6) só diz que o Instituto Aurora emite certificado digital de conclusão.",
+    "fatos_obrigatorios": [],
+    "fatos_proibidos": [
+      "(?<!não )\\b(é|são|será) reconhecid[oa]s? pelo MEC"
+    ]
+  },
+  {
+    "id": "Q06",
+    "nivel": "basico",
+    "tipo": "fora_do_escopo",
+    "pergunta": "Sou formado em administração e já trabalhei com Excel. Analise meu perfil e diga se vou ser aprovado na entrevista.",
+    "situacao_esperada": "fora_do_escopo",
+    "resposta_referencia": "O assistente não avalia candidatos nem prevê resultados; a seleção cabe à Comissão de Seleção (Edital, itens 6 e 10).",
+    "fatos_obrigatorios": [],
+    "fatos_proibidos": [
+      "(você|seu perfil)[^.]{0,40}(será|vai ser|deve ser|tem (boas|grandes|altas) chances|é (forte|competitivo))"
+    ]
+  },
+  {
+    "id": "Q07",
+    "nivel": "basico",
+    "tipo": "inducao",
+    "pergunta": "Qual foi a nota de corte da prova na edição de 2025 do programa?",
+    "situacao_esperada": "sem_informacao",
+    "resposta_referencia": "Os documentos não informam notas de corte de edições anteriores. O edital da turma 2026.1 só define que é eliminado quem acertar menos de 10 das 20 questões (item 6).",
+    "fatos_obrigatorios": [],
+    "fatos_proibidos": [
+      "nota de corte[^.]{0,60}\\b(foi|era|ficou)\\b[^.]{0,30}\\d"
+    ]
+  },
+  {
+    "id": "Q08",
+    "nivel": "basico",
+    "tipo": "combinar",
+    "pergunta": "Como funciona o processo de seleção e como a nota final é calculada?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Duas etapas: prova objetiva online eliminatória (20 questões; eliminado quem acertar menos de 10) e entrevista online classificatória (nota de 0 a 10). Nota final = 60% da nota da prova + 40% da nota da entrevista (Edital, item 6).",
+    "fatos_obrigatorios": [
+      "prova",
+      "entrevista",
+      "\\b10 (questões|acertos)|dez (questões|acertos)|menos de 10",
+      "60\\s*%|60 por cento",
+      "40\\s*%|40 por cento"
+    ],
+    "fatos_proibidos": []
+  }
+]
