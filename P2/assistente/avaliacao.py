@@ -14,7 +14,12 @@ Escala de qualidade (0 a 3):
 
 Critérios complementares, por execução: situação adequada (respondida, sem
 informação ou fora do escopo, como esperado), sem invenção detectada (nenhum
-fato proibido encontrado) e formato aderente (JSON válido ou linha "Fontes:").
+fato proibido afirmado) e formato aderente (JSON válido ou linha "Fontes:").
+
+Fatos proibidos só contam em orações afirmativas: orações que expressam
+ausência de informação ou recusa costumam repetir a pergunta ("não encontrei
+base para responder se o certificado é reconhecido pelo MEC") e não afirmam
+nada.
 
 A nota é calculada por regras sobre os fatos esperados (expressões regulares
 de cada caso). Divergências encontradas na leitura das respostas ficam em
@@ -29,11 +34,24 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, ClassVar
 
+from assistente.interpretacao import InterpretadorResposta
 from assistente.modelos import Avaliacao, CasoTeste, RespostaInterpretada, Situacao
 
 
 class Avaliador:
     """Aplica a escala de qualidade e os critérios complementares."""
+
+    SEPARADOR_ORACOES: ClassVar[re.Pattern[str]] = re.compile(r"[.!?;\n]+|\s+mas\s+", re.IGNORECASE)
+
+    @classmethod
+    def oracoes_afirmativas(cls, texto: str) -> list[str]:
+        """Orações do texto que não expressam ausência de informação nem recusa."""
+        oracoes: list[str] = [oracao for oracao in cls.SEPARADOR_ORACOES.split(texto) if oracao.strip()]
+        return [
+            oracao for oracao in oracoes
+            if not InterpretadorResposta.PADRAO_SEM_INFORMACAO.search(oracao)
+            and not InterpretadorResposta.PADRAO_FORA_DO_ESCOPO.search(oracao)
+        ]
 
     def avaliar(self, caso: CasoTeste, interpretada: RespostaInterpretada | None, erro: str | None) -> Avaliacao:
         """Avalia uma execução; erro ou resposta ausente recebe nota 0."""
@@ -43,7 +61,11 @@ class Avaliador:
 
         texto: str = interpretada.texto
         encontrados: int = sum(1 for padrao in caso.fatos_obrigatorios if re.search(padrao, texto, re.IGNORECASE))
-        proibidos: list[str] = [padrao for padrao in caso.fatos_proibidos if re.search(padrao, texto, re.IGNORECASE)]
+        afirmativas: list[str] = self.oracoes_afirmativas(texto)
+        proibidos: list[str] = [
+            padrao for padrao in caso.fatos_proibidos
+            if any(re.search(padrao, oracao, re.IGNORECASE) for oracao in afirmativas)
+        ]
         situacao: Situacao | None = interpretada.situacao
         esperada: Situacao = caso.situacao_esperada
         sem_invencao: bool = not proibidos

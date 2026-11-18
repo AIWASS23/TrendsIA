@@ -7,28 +7,38 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import asdict
 
-from assistente.avaliacao import RevisaoManual
-from assistente.modelos import Avaliacao, CasoTeste, Execucao
+from assistente.avaliacao import Avaliador, RevisaoManual
+from assistente.interpretacao import InterpretadorResposta
+from assistente.modelos import Avaliacao, CasoTeste, Execucao, RespostaInterpretada
 
 
 class GeradorRelatorio:
-    """Monta resumo por configuração, tabela por caso, consistência e respostas completas."""
+    """Monta resumo por configuração, tabela por caso, consistência e respostas completas.
+
+    As avaliações são recalculadas a partir das respostas brutas registradas,
+    com os casos e as regras atuais; a revisão manual é aplicada por cima.
+    """
 
     def __init__(
         self, titulo: str, metadados_md: list[str], casos: Sequence[CasoTeste], execucoes: Sequence[Execucao],
         revisao: RevisaoManual,
     ) -> None:
-        """Guarda os dados do relatório e aplica a revisão manual às avaliações."""
+        """Guarda os dados, reavalia as respostas registradas e aplica a revisão manual."""
         self.titulo: str = titulo
         self.metadados_md: list[str] = metadados_md
         self.casos: dict[str, CasoTeste] = {caso.identificador: caso for caso in casos}
         self.execucoes: list[Execucao] = list(execucoes)
         self.avaliacoes: dict[str, Avaliacao] = {}
+        interpretador: InterpretadorResposta = InterpretadorResposta()
+        avaliador: Avaliador = Avaliador()
         execucao: Execucao
         for execucao in self.execucoes:
-            if execucao.avaliacao is not None:
-                avaliacao: Avaliacao = Avaliacao(**execucao.avaliacao)
-                self.avaliacoes[execucao.identificador] = revisao.aplicar(execucao.identificador, avaliacao)
+            interpretada: RespostaInterpretada | None = None
+            if not execucao.erro:
+                interpretada = interpretador.interpretar(execucao.resposta, str(execucao.parametros.get("formato", "livre")))
+                execucao.situacao = interpretada.situacao.value if interpretada.situacao else None
+            avaliacao: Avaliacao = avaliador.avaliar(self.casos[execucao.caso], interpretada, execucao.erro)
+            self.avaliacoes[execucao.identificador] = revisao.aplicar(execucao.identificador, avaliacao)
 
     def grupos(self) -> list[str]:
         """Grupos comparados (configuração e condição), na ordem em que aparecem."""

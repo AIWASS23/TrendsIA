@@ -48,6 +48,25 @@ def test_negacao_nao_conta_como_invencao(casos: dict[str, CasoTeste]) -> None:
     assert avaliacao.sem_invencao and avaliacao.nota == 1
 
 
+@pytest.mark.parametrize(
+    ("caso", "texto", "situacao"),
+    [
+        ("Q05", "Não encontrei base documental suficiente para responder se o certificado é reconhecido pelo MEC.", Situacao.SEM_INFORMACAO),
+        ("Q06", "Não é possível avaliar o seu perfil nem prever se você será aprovado; isso está fora do escopo.", Situacao.FORA_DO_ESCOPO),
+    ],
+)
+def test_recusa_que_repete_a_pergunta_nao_e_invencao(casos: dict[str, CasoTeste], caso: str, texto: str, situacao: Situacao) -> None:
+    """Falha encontrada no Básico: a recusa repete a pergunta e não pode contar como invenção."""
+    avaliacao: Avaliacao = AVALIADOR.avaliar(casos[caso], resposta(texto, situacao), None)
+    assert avaliacao.sem_invencao and avaliacao.nota == 3
+
+
+def test_invencao_depois_de_mas_e_detectada(casos: dict[str, CasoTeste]) -> None:
+    """Uma afirmação depois de 'mas' é avaliada separadamente da recusa."""
+    texto: str = "Não encontrei essa informação, mas o certificado é reconhecido pelo MEC."
+    assert not AVALIADOR.avaliar(casos["Q05"], resposta(texto, Situacao.SEM_INFORMACAO), None).sem_invencao
+
+
 def test_recusa_quando_havia_resposta(casos: dict[str, CasoTeste]) -> None:
     """Reconhecer ausência numa pergunta com resposta nos documentos vale 0, sem invenção."""
     avaliacao: Avaliacao = AVALIADOR.avaliar(casos["Q01"], resposta("Não encontrei base documental.", Situacao.SEM_INFORMACAO), None)
