@@ -12,6 +12,18 @@
     "fatos_proibidos": []
   },
   {
+    "id": "Q02",
+    "nivel": "intermediario",
+    "tipo": "direta",
+    "pergunta": "Até quando posso me inscrever?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Até 17/03/2026, às 23h59, conforme a Retificação nº 1 do Edital (item 4) e o Calendário versão 2. As perguntas frequentes, mais antigas, dizem 10/03/2026.",
+    "fatos_obrigatorios": [
+      "17/03|17 de março|17\\.03"
+    ],
+    "fatos_proibidos": []
+  },
+  {
     "id": "Q03",
     "nivel": "basico",
     "tipo": "combinar",
@@ -26,6 +38,19 @@
       "laudo",
       "12 meses|doze meses",
       "\\bCID\\b|Classificação Internacional de Doenças"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q04",
+    "nivel": "intermediario",
+    "tipo": "ambigua",
+    "pergunta": "Qual é o valor da bolsa?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Depende do módulo: R$ 500,00 por mês no módulo online (meses 1 a 4) e R$ 800,00 por mês no módulo presencial (meses 5 e 6) (Edital, item 8).",
+    "fatos_obrigatorios": [
+      "500",
+      "800"
     ],
     "fatos_proibidos": []
   },
@@ -78,6 +103,47 @@
       "\\b10 (questões|acertos)|dez (questões|acertos)|menos de 10",
       "60\\s*%|60 por cento",
       "40\\s*%|40 por cento"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q09",
+    "nivel": "intermediario",
+    "tipo": "direta",
+    "pergunta": "Posso trabalhar com carteira assinada enquanto participo do programa e recebo a bolsa?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Sim, desde que o trabalho seja compatível com as 20 horas semanais e os horários do programa; é vedado acumular a bolsa com outra bolsa de formação de programa público (Regulamento, item 4).",
+    "fatos_obrigatorios": [
+      "compatív",
+      "20 horas|20h|vinte horas"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q10",
+    "nivel": "intermediario",
+    "tipo": "direta",
+    "pergunta": "Em que situações a inscrição pode ser indeferida?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Documentação incompleta ou ilegível, envio fora do prazo, não atendimento aos requisitos do item 3 e informação falsa ou documento adulterado (Edital, item 7).",
+    "fatos_obrigatorios": [
+      "incomplet|ilegív",
+      "fora do prazo|após o prazo",
+      "requisitos",
+      "fals|adulter"
+    ],
+    "fatos_proibidos": []
+  },
+  {
+    "id": "Q11",
+    "nivel": "intermediario",
+    "tipo": "contradicao",
+    "pergunta": "Nas perguntas frequentes está escrito que as inscrições vão até 10 de março. Essa data está certa?",
+    "situacao_esperada": "respondida",
+    "resposta_referencia": "Não. A Retificação nº 1 do Edital (20/02/2026) prorrogou as inscrições até 17/03/2026, data confirmada no Calendário versão 2. As perguntas frequentes são de 05/02/2026, anteriores à retificação.",
+    "fatos_obrigatorios": [
+      "17/03|17 de março",
+      "retifica|prorrog|atualiza|substitu"
     ],
     "fatos_proibidos": []
   }
