@@ -1,0 +1,24 @@
+$ python -m assistente perguntar "" --config C2 --registro resultados/intermediario/falhas/etapas.jsonl
+[validar_pergunta] falha (0.000 s) {'caracteres': 0} erro: A pergunta está vazia.
+[C2] situação final: rejeitada
+Erro: A pergunta está vazia.
+(código de saída: 1)
+
+$ P2_TIMEOUT=0.05 python -m assistente perguntar "Qual é a idade mínima?" --config C2 --registro resultados/intermediario/falhas/etapas.jsonl
+[validar_pergunta] ok (0.000 s) {'caracteres': 22}
+[montar_prompt] ok (0.000 s) {'hash_instrucao': 'f2d27b2addfc', 'caracteres_prompt': 1971}
+[chamar_llm] falha (77.601 s) {'tentativa': 1} erro: Timeout: sem resposta em 0.05 s por tentativa, em 5 tentativas.
+[C2] situação final: falha_llm
+Erro: Timeout: sem resposta em 0.05 s por tentativa, em 5 tentativas. A execução não pôde ser concluída.
+(código de saída: 4)
+
+$ python -m assistente perguntar "Qual é a idade mínima?" --config C9
+Erro: Configurações inexistentes: ['C9']. Disponíveis: ['C1', 'C2', 'C3'].
+(código de saída: 3)
+
+$ GEMINI_API_KEY=chave-invalida-de-teste python -m assistente perguntar "Qual é a idade mínima?" --config C2 --registro resultados/intermediario/falhas/etapas.jsonl
+[validar_pergunta] ok (0.000 s) {'caracteres': 22}
+[montar_prompt] ok (0.000 s) {'hash_instrucao': 'f2d27b2addfc', 'caracteres_prompt': 1971}
+[chamar_llm] falha (0.372 s) {'tentativa': 1} erro: Chave de API recusada (HTTP 400). Confira GEMINI_API_KEY.
+Erro: Chave de API recusada (HTTP 400). Confira GEMINI_API_KEY.
+(código de saída: 3)
