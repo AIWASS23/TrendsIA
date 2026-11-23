@@ -14,7 +14,14 @@ Escala de qualidade (0 a 3):
 
 Critérios complementares, por execução: situação adequada (respondida, sem
 informação ou fora do escopo, como esperado), sem invenção detectada (nenhum
-fato proibido afirmado) e formato aderente (JSON válido ou linha "Fontes:").
+fato proibido afirmado e nenhuma fonte inexistente citada) e formato
+aderente (JSON válido ou linha "Fontes:"). Com RAG, também: fontes válidas
+(toda fonte citada estava no contexto enviado) e fonte coerente (nas
+perguntas com resposta, ao menos uma fonte citada é um trecho esperado).
+
+Citar fonte que não foi enviada ao modelo (inclusive qualquer fonte, sem
+RAG) é invenção de procedência e vale nota 0, a mesma regra aplicada na
+revisão manual do nível Intermediário.
 
 Fatos proibidos só contam em orações afirmativas: orações que expressam
 ausência de informação ou recusa costumam repetir a pergunta ("não encontrei
@@ -53,8 +60,14 @@ class Avaliador:
             and not InterpretadorResposta.PADRAO_FORA_DO_ESCOPO.search(oracao)
         ]
 
-    def avaliar(self, caso: CasoTeste, interpretada: RespostaInterpretada | None, erro: str | None) -> Avaliacao:
-        """Avalia uma execução; erro ou resposta ausente recebe nota 0."""
+    def avaliar(
+        self, caso: CasoTeste, interpretada: RespostaInterpretada | None, erro: str | None,
+        fontes_enviadas: dict[str, str] | None = None, com_rag: bool = False,
+    ) -> Avaliacao:
+        """Avalia uma execução; erro ou resposta ausente recebe nota 0.
+
+        `fontes_enviadas` mapeia rótulos ("F1") para os trechos enviados ao modelo.
+        """
         total: int = len(caso.fatos_obrigatorios)
         if erro or interpretada is None or not interpretada.texto:
             return Avaliacao(0, False, True, False, 0, total, f"sem resposta: {erro or 'vazia'}")
@@ -93,6 +106,16 @@ class Avaliador:
             else:
                 nota, observacao = 1, "respondeu onde devia reconhecer limite; verificar invenção"
 
+        enviadas: dict[str, str] = fontes_enviadas or {}
+        inexistentes: list[str] = [fonte for fonte in interpretada.fontes if fonte not in enviadas]
+        if inexistentes:
+            nota, sem_invencao = 0, False
+            observacao += f"; citou fonte inexistente ({', '.join(inexistentes)})"
+        fonte_coerente: bool | None = None
+        if com_rag and esperada == Situacao.RESPONDIDA and caso.fontes_esperadas:
+            citados: list[str] = [enviadas[fonte] for fonte in interpretada.fontes if fonte in enviadas]
+            fonte_coerente = any(trecho.startswith(prefixo) for trecho in citados for prefixo in caso.fontes_esperadas)
+
         return Avaliacao(
             nota=nota,
             situacao_adequada=situacao_adequada,
@@ -101,6 +124,8 @@ class Avaliador:
             fatos_encontrados=encontrados,
             fatos_total=total,
             observacao=observacao,
+            fontes_validas=not inexistentes,
+            fonte_coerente=fonte_coerente,
         )
 
 

@@ -37,7 +37,10 @@ class GeradorRelatorio:
             if not execucao.erro:
                 interpretada = interpretador.interpretar(execucao.resposta, str(execucao.parametros.get("formato", "livre")))
                 execucao.situacao = interpretada.situacao.value if interpretada.situacao else None
-            avaliacao: Avaliacao = avaliador.avaliar(self.casos[execucao.caso], interpretada, execucao.erro)
+            fontes: dict[str, str] = {str(item["fonte"]): str(item["id"]) for item in execucao.trechos if item.get("fonte")}
+            avaliacao: Avaliacao = avaliador.avaliar(
+                self.casos[execucao.caso], interpretada, execucao.erro, fontes, execucao.condicao == "com_rag"
+            )
             self.avaliacoes[execucao.identificador] = revisao.aplicar(execucao.identificador, avaliacao)
 
     def grupos(self) -> list[str]:
@@ -62,9 +65,11 @@ class GeradorRelatorio:
         cabecalho: list[str] = ["Medida", *self.grupos()]
         linhas: list[list[str]] = [
             ["Execuções"], ["Nota média (0 a 3)"], ["Notas 0 / 1 / 2 / 3"], ["Situação adequada"], ["Sem invenção detectada"],
-            ["Formato aderente"], ["Erros de execução"], ["Latência média (s)"], ["Latência mediana (s)"],
+            ["Formato aderente"], ["Fontes válidas"], ["Fonte coerente (com RAG, perguntas com resposta)"],
+            ["Trechos no contexto (média)"], ["Erros de execução"], ["Latência média do LLM (s)"], ["Latência mediana do LLM (s)"],
+            ["Latência média da recuperação (s)"], ["Latência média total (s)"],
             ["Tokens de entrada (média)"], ["Tokens de saída (média)"], ["Tokens totais (média)"], ["Chamadas ao LLM"],
-            ["Novas tentativas do SDK"], ["Respostas revisadas manualmente"],
+            ["Novas tentativas do SDK"], ["Chamadas de embedding"], ["Respostas revisadas manualmente"],
         ]
         grupo: str
         for grupo in self.grupos():
@@ -72,6 +77,10 @@ class GeradorRelatorio:
             avals: list[Avaliacao] = [self.avaliacoes[e.identificador] for e in itens]
             notas: Counter[int] = Counter(a.nota for a in avals)
             latencias: list[float] = [e.latencia_s for e in itens if e.latencia_s is not None]
+            recuperacoes: list[float] = [e.latencia_recuperacao_s for e in itens if e.latencia_recuperacao_s is not None]
+            totais: list[float] = [(e.latencia_s or 0.0) + (e.latencia_recuperacao_s or 0.0) for e in itens if e.latencia_s is not None]
+            coerentes: list[bool] = [a.fonte_coerente for a in avals if a.fonte_coerente is not None]
+            com_rag: bool = any(e.condicao == "com_rag" for e in itens)
             valores: list[str] = [
                 str(len(itens)),
                 f"{statistics.mean(a.nota for a in avals):.2f}",
@@ -79,14 +88,20 @@ class GeradorRelatorio:
                 self._taxa(sum(a.situacao_adequada for a in avals), len(avals)),
                 self._taxa(sum(a.sem_invencao for a in avals), len(avals)),
                 self._taxa(sum(a.formato_aderente for a in avals), len(avals)),
+                self._taxa(sum(a.fontes_validas for a in avals), len(avals)),
+                self._taxa(sum(coerentes), len(coerentes)),
+                f"{statistics.mean(len(e.trechos) for e in itens):.1f}" if com_rag else "—",
                 str(sum(1 for e in itens if e.erro)),
                 f"{statistics.mean(latencias):.2f}" if latencias else "—",
                 f"{statistics.median(latencias):.2f}" if latencias else "—",
+                f"{statistics.mean(recuperacoes):.2f}" if recuperacoes else "—",
+                f"{statistics.mean(totais):.2f}" if totais else "—",
                 self._media([e.tokens_entrada for e in itens]),
                 self._media([e.tokens_saida for e in itens]),
                 self._media([e.tokens_total for e in itens]),
                 str(sum(e.chamadas for e in itens)),
                 str(sum(e.tentativas_extras for e in itens)),
+                str(sum(e.chamadas_embedding for e in itens)),
                 str(sum(a.revisada for a in avals)),
             ]
             indice: int
@@ -103,6 +118,11 @@ class GeradorRelatorio:
         for execucao in self.execucoes:
             avaliacao: Avaliacao = self.avaliacoes[execucao.identificador]
             observacao: str = f"situação: {execucao.situacao or '—'}; {avaliacao.observacao}"
+            if execucao.condicao == "com_rag":
+                enviados: str = ", ".join(f"{t['fonte']}={t['id']}" for t in execucao.trechos) or "nenhum acima do limiar"
+                observacao += f"; trechos: {enviados}; fontes citadas: {', '.join(execucao.fontes) or 'nenhuma'}"
+                if avaliacao.fonte_coerente is not None:
+                    observacao += f"; fonte coerente: {'sim' if avaliacao.fonte_coerente else 'não'}"
             if not avaliacao.formato_aderente and not execucao.erro:
                 observacao += "; formato não aderente"
             linhas.append([
@@ -149,6 +169,7 @@ class GeradorRelatorio:
                 "",
                 f"**Pergunta:** {execucao.pergunta}",
                 "",
+                *([f"**Trechos enviados:** {self._trechos_enviados(execucao)}", ""] if execucao.condicao == "com_rag" else []),
                 "```text",
                 (execucao.resposta or f"(erro: {execucao.erro})").strip(),
                 "```",
@@ -159,6 +180,12 @@ class GeradorRelatorio:
                 "",
             ]
         return "\n".join(linhas)
+
+    @staticmethod
+    def _trechos_enviados(execucao: Execucao) -> str:
+        """Rótulo, trecho e similaridade de cada trecho enviado ao modelo."""
+        partes: list[str] = [f"{t['fonte']}={t['id']} ({t['similaridade']})" for t in execucao.trechos]
+        return ", ".join(partes) or "nenhum"
 
     @staticmethod
     def _tabela(titulo: str, cabecalho: list[str], linhas: list[list[str]]) -> str:

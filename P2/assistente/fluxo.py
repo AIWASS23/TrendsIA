@@ -3,11 +3,14 @@
 Etapas:
 
 1. `validar_pergunta`: recusa pergunta vazia ou longa demais.
-2. `montar_prompt`: instruções da configuração + pergunta.
-3. `chamar_llm`: chamada à API (o SDK repete falhas temporárias; o fluxo não
+2. `recuperar_trechos` (só com RAG): embedding da pergunta, busca no índice,
+   trechos aceitos e descartados pelo limiar.
+3. `montar_prompt`: instruções da configuração + trechos (com RAG) + pergunta.
+4. `chamar_llm`: chamada à API (o SDK repete falhas temporárias; o fluxo não
    repete indefinidamente).
-4. `validar_resposta`: confere o formato; se estiver fora dele, faz **uma**
-   nova chamada; se continuar fora, devolve o resultado parcial marcado.
+5. `validar_resposta`: confere o formato e se as fontes citadas existem no
+   contexto enviado; se o formato estiver errado, faz **uma** nova chamada;
+   se continuar errado, devolve o resultado parcial marcado.
 
 Cada etapa gera um `RegistroEtapa` (início, duração, situação, saída resumida
 e erro). Erros de configuração (arquivo de prompt ausente, chave ou modelo
@@ -30,6 +33,7 @@ from assistente.interpretacao import InterpretadorResposta
 from assistente.llm import ClienteGemini
 from assistente.modelos import RespostaInterpretada, RespostaLLM
 from assistente.prompts import MontadorPrompt, PromptMontado
+from assistente.rag.recuperador import Recuperador, ResultadoRecuperacao
 from assistente.relogio import agora
 
 
@@ -38,6 +42,7 @@ class SituacaoFinal(StrEnum):
 
     CONCLUIDA = "concluida"
     REJEITADA = "rejeitada"
+    FALHA_RECUPERACAO = "falha_recuperacao"
     FALHA_LLM = "falha_llm"
     FORMATO_INVALIDO = "formato_invalido"
 
@@ -68,6 +73,7 @@ class ResultadoFluxo:
     respostas: list[RespostaLLM] = field(default_factory=list)
     interpretada: RespostaInterpretada | None = None
     prompt: PromptMontado | None = None
+    recuperacao: ResultadoRecuperacao | None = None
     erro: str | None = None
 
     @property
@@ -97,12 +103,14 @@ class FluxoResposta:
         cliente: ClienteGemini,
         montador: MontadorPrompt,
         registrar: Callable[[RegistroEtapa], None] = lambda _registro: None,
+        recuperador: Recuperador | None = None,
     ) -> None:
-        """Guarda as dependências do fluxo."""
+        """Guarda as dependências do fluxo; `recuperador` só é necessário com RAG."""
         self.cliente: ClienteGemini = cliente
         self.montador: MontadorPrompt = montador
         self.interpretador: InterpretadorResposta = InterpretadorResposta()
         self.registrar: Callable[[RegistroEtapa], None] = registrar
+        self.recuperador: Recuperador | None = recuperador
 
     def _registrar(
         self, execucao: str, configuracao: ConfiguracaoGeracao, etapa: str, inicio: float, data: str,
@@ -123,8 +131,8 @@ class FluxoResposta:
             raise ErroEntrada(f"A pergunta tem {len(normalizada)} caracteres; o limite é {self.LIMITE_CARACTERES}.")
         return normalizada
 
-    def executar(self, execucao: str, pergunta: str, configuracao: ConfiguracaoGeracao) -> ResultadoFluxo:
-        """Roda as etapas para uma pergunta numa configuração."""
+    def executar(self, execucao: str, pergunta: str, configuracao: ConfiguracaoGeracao, com_rag: bool = False) -> ResultadoFluxo:
+        """Roda as etapas para uma pergunta numa configuração, sem ou com RAG."""
         inicio: float = time.monotonic()
         data: str = agora()
         try:
@@ -134,17 +142,41 @@ class FluxoResposta:
             return ResultadoFluxo(SituacaoFinal.REJEITADA, erro=str(erro))
         self._registrar(execucao, configuracao, "validar_pergunta", inicio, data, "ok", {"caracteres": len(normalizada)})
 
+        recuperacao: ResultadoRecuperacao | None = None
+        if com_rag:
+            if self.recuperador is None:
+                raise ErroConfiguracao("Condição com RAG pedida, mas o fluxo não tem recuperador.")
+            inicio, data = time.monotonic(), agora()
+            try:
+                recuperacao = self.recuperador.recuperar(normalizada)
+            except ErroLLM as erro:
+                self._registrar(execucao, configuracao, "recuperar_trechos", inicio, data, "falha", {}, str(erro))
+                return ResultadoFluxo(SituacaoFinal.FALHA_RECUPERACAO, erro=str(erro))
+            except ErroConfiguracao as erro:
+                self._registrar(execucao, configuracao, "recuperar_trechos", inicio, data, "falha", {}, str(erro))
+                raise
+            self._registrar(execucao, configuracao, "recuperar_trechos", inicio, data, "ok", {
+                "k": self.recuperador.k,
+                "limiar": self.recuperador.limiar,
+                "aceitos": [[item.trecho.identificador, round(item.similaridade, 4)] for item in recuperacao.aceitos],
+                "descartados": [[item.trecho.identificador, round(item.similaridade, 4)] for item in recuperacao.descartados],
+                "chamadas_embedding": recuperacao.chamadas_embedding,
+            })
+
         inicio, data = time.monotonic(), agora()
         try:
-            prompt: PromptMontado = self.montador.montar(normalizada, configuracao)
+            prompt: PromptMontado = self.montador.montar(
+                normalizada, configuracao, recuperacao.aceitos if recuperacao is not None else None
+            )
         except ErroConfiguracao as erro:
             self._registrar(execucao, configuracao, "montar_prompt", inicio, data, "falha", {}, str(erro))
             raise
         self._registrar(execucao, configuracao, "montar_prompt", inicio, data, "ok", {
             "hash_instrucao": prompt.hash_instrucao,
             "caracteres_prompt": len(prompt.instrucao_sistema) + len(prompt.conteudo_usuario),
+            "fontes_enviadas": prompt.fontes,
         })
-        resultado: ResultadoFluxo = ResultadoFluxo(SituacaoFinal.CONCLUIDA, prompt=prompt)
+        resultado: ResultadoFluxo = ResultadoFluxo(SituacaoFinal.CONCLUIDA, prompt=prompt, recuperacao=recuperacao)
 
         tentativa: int
         for tentativa in range(1, self.CHAMADAS_MAXIMAS + 1):
@@ -173,6 +205,7 @@ class FluxoResposta:
                 "formato_valido": interpretada.formato_valido,
                 "situacao": interpretada.situacao.value if interpretada.situacao else None,
                 "fontes": list(interpretada.fontes),
+                "fontes_inexistentes": [fonte for fonte in interpretada.fontes if fonte not in prompt.fontes],
                 "problema": interpretada.problema,
             }
             if interpretada.formato_valido:

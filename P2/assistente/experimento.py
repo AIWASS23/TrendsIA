@@ -52,6 +52,7 @@ class Metadados:
     repeticoes: int
     configuracoes: dict[str, dict[str, Any]]
     hash_instrucoes: dict[str, str] = field(default_factory=dict)
+    rag: dict[str, Any] = field(default_factory=dict)
     fim: str | None = None
 
     def gravar(self, caminho: Path) -> None:
@@ -69,11 +70,12 @@ class Metadados:
 class Experimento:
     """Roda cada caso em cada configuração, com repetições, sem duplicar a lógica por configuração.
 
-    A ordem é caso → repetição → configuração: as configurações de um mesmo
-    caso rodam em sequência, sob condições de rede e de carga parecidas.
+    A ordem é caso → repetição → configuração → condição: o que se compara
+    para um mesmo caso roda em sequência, sob condições de rede e de carga
+    parecidas.
     """
 
-    CONDICAO: ClassVar[str] = "sem_rag"
+    CONDICOES: ClassVar[tuple[str, ...]] = ("sem_rag", "com_rag")
 
     def __init__(
         self,
@@ -85,10 +87,15 @@ class Experimento:
         registro_etapas: RegistroJSONL,
         pausa_s: float = 4.0,
         limite_erros_seguidos: int = 3,
+        condicoes: Sequence[str] = ("sem_rag",),
     ) -> None:
         """Define o que será executado e onde serão gravadas as execuções e as etapas."""
         if repeticoes < 1:
             raise ValueError("O número de repetições deve ser pelo menos 1.")
+        invalidas: set[str] = set(condicoes) - set(self.CONDICOES)
+        if invalidas or not condicoes:
+            raise ValueError(f"Condições inválidas: {sorted(invalidas)}. Use {self.CONDICOES}.")
+        self.condicoes: tuple[str, ...] = tuple(condicoes)
         self.configuracoes: tuple[ConfiguracaoGeracao, ...] = tuple(configuracoes)
         self.casos: tuple[CasoTeste, ...] = tuple(casos)
         self.repeticoes: int = repeticoes
@@ -106,7 +113,7 @@ class Experimento:
 
     def total(self) -> int:
         """Número de execuções previstas."""
-        return len(self.configuracoes) * len(self.casos) * self.repeticoes
+        return len(self.configuracoes) * len(self.casos) * self.repeticoes * len(self.condicoes)
 
     def executar(self, avisar: Callable[[str], None] = lambda _texto: None) -> list[Execucao]:
         """Executa tudo; interrompe após falhas seguidas do LLM."""
@@ -118,31 +125,35 @@ class Experimento:
             for repeticao in range(1, self.repeticoes + 1):
                 configuracao: ConfiguracaoGeracao
                 for configuracao in self.configuracoes:
-                    execucao: Execucao = self.executar_um(caso, configuracao, repeticao)
-                    self.registro.adicionar(execucao.para_dict())
-                    execucoes.append(execucao)
-                    avisar(f"[{len(execucoes)}/{self.total()}] {execucao.identificador}: {execucao.erro or 'ok'}")
-                    erros_seguidos = erros_seguidos + 1 if execucao.erro else 0
-                    if erros_seguidos >= self.limite_erros_seguidos:
-                        raise ErroExperimento(f"{erros_seguidos} falhas seguidas; última: {execucao.erro}")
-                    time.sleep(self.pausa_s)
+                    condicao: str
+                    for condicao in self.condicoes:
+                        execucao: Execucao = self.executar_um(caso, configuracao, repeticao, condicao)
+                        self.registro.adicionar(execucao.para_dict())
+                        execucoes.append(execucao)
+                        avisar(f"[{len(execucoes)}/{self.total()}] {execucao.identificador}: {execucao.erro or 'ok'}")
+                        erros_seguidos = erros_seguidos + 1 if execucao.erro else 0
+                        if erros_seguidos >= self.limite_erros_seguidos:
+                            raise ErroExperimento(f"{erros_seguidos} falhas seguidas; última: {execucao.erro}")
+                        time.sleep(self.pausa_s)
         return execucoes
 
-    def executar_um(self, caso: CasoTeste, configuracao: ConfiguracaoGeracao, repeticao: int) -> Execucao:
-        """Passa um caso pelo fluxo numa configuração e avalia o resultado."""
+    def executar_um(self, caso: CasoTeste, configuracao: ConfiguracaoGeracao, repeticao: int, condicao: str = "sem_rag") -> Execucao:
+        """Passa um caso pelo fluxo numa configuração e condição e avalia o resultado."""
         execucao: Execucao = Execucao(
-            identificador=f"{caso.identificador}-{configuracao.nome}-{self.CONDICAO}-r{repeticao}",
+            identificador=f"{caso.identificador}-{configuracao.nome}-{condicao}-r{repeticao}",
             caso=caso.identificador,
             configuracao=configuracao.nome,
-            condicao=self.CONDICAO,
+            condicao=condicao,
             repeticao=repeticao,
             data=agora(),
             parametros=configuracao.parametros(),
             pergunta=caso.pergunta,
         )
-        resultado: ResultadoFluxo = self.fluxo.executar(execucao.identificador, caso.pergunta, configuracao)
+        com_rag: bool = condicao == "com_rag"
+        resultado: ResultadoFluxo = self.fluxo.executar(execucao.identificador, caso.pergunta, configuracao, com_rag)
         self.preencher(execucao, resultado)
-        avaliacao: Avaliacao = self.avaliador.avaliar(caso, resultado.interpretada, execucao.erro)
+        fontes: dict[str, str] = resultado.prompt.fontes if resultado.prompt else {}
+        avaliacao: Avaliacao = self.avaliador.avaliar(caso, resultado.interpretada, execucao.erro, fontes, com_rag)
         execucao.avaliacao = asdict(avaliacao)
         return execucao
 
@@ -151,8 +162,21 @@ class Experimento:
         """Copia para a execução a resposta, as medidas e a situação final do fluxo."""
         execucao.situacao_final = resultado.situacao_final.value
         execucao.chamadas = len(resultado.respostas) + (1 if resultado.situacao_final == SituacaoFinal.FALHA_LLM else 0)
-        if resultado.situacao_final in (SituacaoFinal.REJEITADA, SituacaoFinal.FALHA_LLM):
+        if resultado.situacao_final in (SituacaoFinal.REJEITADA, SituacaoFinal.FALHA_LLM, SituacaoFinal.FALHA_RECUPERACAO):
             execucao.erro = resultado.erro
+        if resultado.recuperacao is not None:
+            rotulos: dict[str, str] = {trecho: rotulo for rotulo, trecho in (resultado.prompt.fontes if resultado.prompt else {}).items()}
+            execucao.trechos = [
+                {"fonte": rotulos.get(item.trecho.identificador), "id": item.trecho.identificador, "similaridade": round(item.similaridade, 4)}
+                for item in resultado.recuperacao.aceitos
+            ]
+            execucao.descartados = [
+                {"id": item.trecho.identificador, "similaridade": round(item.similaridade, 4)} for item in resultado.recuperacao.descartados
+            ]
+            execucao.latencia_recuperacao_s = round(resultado.recuperacao.latencia_s, 3)
+            execucao.chamadas_embedding = resultado.recuperacao.chamadas_embedding
+        if resultado.prompt is not None:
+            execucao.contexto_enviado = resultado.prompt.contexto
         ultima: RespostaLLM | None = resultado.ultima
         if ultima is not None:
             execucao.resposta = ultima.texto
