@@ -9,7 +9,10 @@
     "fatos_obrigatorios": [
       "18 anos|dezoito anos"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#3-requisitos-para-participacao"
+    ]
   },
   {
     "id": "Q02",
@@ -21,7 +24,12 @@
     "fatos_obrigatorios": [
       "17/03|17 de março|17\\.03"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#4-inscricao",
+      "calendario#datas",
+      "edital#historico-de-alteracoes"
+    ]
   },
   {
     "id": "Q03",
@@ -39,7 +47,10 @@
       "12 meses|doze meses",
       "\\bCID\\b|Classificação Internacional de Doenças"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#5-documentos-exigidos"
+    ]
   },
   {
     "id": "Q04",
@@ -52,7 +63,10 @@
       "500",
       "800"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#8-bolsa-auxilio"
+    ]
   },
   {
     "id": "Q05",
@@ -64,7 +78,8 @@
     "fatos_obrigatorios": [],
     "fatos_proibidos": [
       "(?<!não )\\b(é|são|será) reconhecid[oa]s? pelo MEC"
-    ]
+    ],
+    "fontes_esperadas": []
   },
   {
     "id": "Q06",
@@ -76,7 +91,8 @@
     "fatos_obrigatorios": [],
     "fatos_proibidos": [
       "(você|seu perfil)[^.]{0,40}(será|vai ser|deve ser|tem (boas|grandes|altas) chances|é (forte|competitivo))"
-    ]
+    ],
+    "fontes_esperadas": []
   },
   {
     "id": "Q07",
@@ -88,7 +104,8 @@
     "fatos_obrigatorios": [],
     "fatos_proibidos": [
       "nota de corte[^.]{0,60}\\b(foi|era|ficou)\\b[^.]{0,30}\\d"
-    ]
+    ],
+    "fontes_esperadas": []
   },
   {
     "id": "Q08",
@@ -104,7 +121,10 @@
       "60\\s*%|60 por cento",
       "40\\s*%|40 por cento"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#6-processo-de-selecao"
+    ]
   },
   {
     "id": "Q09",
@@ -117,7 +137,10 @@
       "compatív",
       "20 horas|20h|vinte horas"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "regulamento#4-acumulo-de-bolsa-e-trabalho"
+    ]
   },
   {
     "id": "Q10",
@@ -132,7 +155,10 @@
       "requisitos",
       "fals|adulter"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#7-indeferimento-da-inscricao"
+    ]
   },
   {
     "id": "Q11",
@@ -145,6 +171,12 @@
       "17/03|17 de março",
       "retifica|prorrog|atualiza|substitu"
     ],
-    "fatos_proibidos": []
+    "fatos_proibidos": [],
+    "fontes_esperadas": [
+      "edital#4-inscricao",
+      "edital#historico-de-alteracoes",
+      "calendario#datas",
+      "faq#ate-quando-posso-me-inscrever"
+    ]
   }
 ]
