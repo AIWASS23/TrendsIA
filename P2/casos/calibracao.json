@@ -1,0 +1,15 @@
+{
+  "descricao": "Perguntas usadas só para definir o limiar de similaridade; não são casos de teste. Regra, definida antes de calcular: limiar = média entre a menor similaridade máxima das perguntas do domínio e a maior similaridade máxima das perguntas fora do domínio, arredondada para baixo em 2 casas. Se as faixas se sobrepuserem, limiar = maior similaridade máxima fora do domínio.",
+  "dominio": [
+    "Qual é a carga horária total do programa?",
+    "Em que formato devo enviar os documentos?",
+    "Quando começam as aulas?",
+    "Quantas vagas são reservadas para pessoas com deficiência?"
+  ],
+  "fora_do_dominio": [
+    "Qual é a capital da Austrália?",
+    "Como faço um bolo de cenoura?",
+    "Quem ganhou a Copa do Mundo de 2002?",
+    "Qual é a previsão do tempo para amanhã?"
+  ]
+}
