@@ -1,0 +1,47 @@
+{
+  "inicio": "2026-11-27T17:48:58-03:00",
+  "condicao": "sem_rag+com_rag",
+  "arquivo_casos": "casos/casos.json",
+  "casos": [
+    "Q01",
+    "Q02",
+    "Q03",
+    "Q04",
+    "Q05",
+    "Q06",
+    "Q07",
+    "Q08",
+    "Q09",
+    "Q10",
+    "Q11"
+  ],
+  "repeticoes": 1,
+  "configuracoes": {
+    "C2": {
+      "descricao": "Saída estruturada (JSON com situação, resposta e fontes); demais parâmetros iguais à C1.",
+      "fator_variado": [
+        "formato"
+      ],
+      "modelo": "gemini-3.5-flash-lite",
+      "temperatura": 1.0,
+      "top_p": 0.95,
+      "max_tokens": 1024,
+      "pensamento": "minimal",
+      "formato": "estruturado",
+      "instrucoes": "instrucoes_v1"
+    }
+  },
+  "hash_instrucoes": {
+    "C2": "f2d27b2addfc"
+  },
+  "rag": {
+    "modelo_embeddings": "gemini-embedding-2",
+    "dimensao": 768,
+    "max_palavras": 180,
+    "k": 4,
+    "limiar": 0.6,
+    "indice": "indice/indice.json",
+    "hash_trechos": "bd02d2fb94c47be4"
+  },
+  "fim": "2026-11-27T17:50:58-03:00"
+}

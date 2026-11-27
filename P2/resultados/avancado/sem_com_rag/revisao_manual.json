@@ -1,0 +1,6 @@
+{
+  "Q08-C2-com_rag-r1": {
+    "nota": 3,
+    "justificativa": "Falso negativo da rubrica: a resposta traz o limite de eliminação com outra redação ('acertar pelo menos 10 das 20 questões'), que a expressão '10 questões|10 acertos|menos de 10' não reconhece. Todos os 5 fatos esperados estão presentes."
+  }
+}
