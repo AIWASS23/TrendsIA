@@ -6,22 +6,14 @@ import json
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
 from assistente.avaliacao import Avaliador
 from assistente.configuracoes import ConfiguracaoGeracao
-from assistente.erros import ErroLLM
-from assistente.interpretacao import InterpretadorResposta
-from assistente.llm import ClienteGemini
-from assistente.modelos import Avaliacao, CasoTeste, Execucao, RespostaInterpretada, RespostaLLM
-from assistente.prompts import MontadorPrompt, PromptMontado
-
-
-def agora() -> str:
-    """Data e hora atuais em ISO 8601, com fuso horário."""
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+from assistente.fluxo import FluxoResposta, RegistroEtapa, ResultadoFluxo, SituacaoFinal
+from assistente.modelos import Avaliacao, CasoTeste, Execucao, RespostaLLM, Situacao
+from assistente.relogio import agora
 
 
 class ErroExperimento(Exception):
@@ -88,25 +80,29 @@ class Experimento:
         configuracoes: Sequence[ConfiguracaoGeracao],
         casos: Sequence[CasoTeste],
         repeticoes: int,
-        cliente: ClienteGemini,
-        montador: MontadorPrompt,
+        fluxo: FluxoResposta,
         registro: RegistroJSONL,
+        registro_etapas: RegistroJSONL,
         pausa_s: float = 4.0,
         limite_erros_seguidos: int = 3,
     ) -> None:
-        """Define o que será executado e onde será registrado."""
+        """Define o que será executado e onde serão gravadas as execuções e as etapas."""
         if repeticoes < 1:
             raise ValueError("O número de repetições deve ser pelo menos 1.")
         self.configuracoes: tuple[ConfiguracaoGeracao, ...] = tuple(configuracoes)
         self.casos: tuple[CasoTeste, ...] = tuple(casos)
         self.repeticoes: int = repeticoes
-        self.cliente: ClienteGemini = cliente
-        self.montador: MontadorPrompt = montador
+        self.fluxo: FluxoResposta = fluxo
+        self.fluxo.registrar = self._registrar_etapa
         self.registro: RegistroJSONL = registro
+        self.registro_etapas: RegistroJSONL = registro_etapas
         self.pausa_s: float = pausa_s
         self.limite_erros_seguidos: int = limite_erros_seguidos
-        self.interpretador: InterpretadorResposta = InterpretadorResposta()
         self.avaliador: Avaliador = Avaliador()
+
+    def _registrar_etapa(self, registro: RegistroEtapa) -> None:
+        """Grava o registro de uma etapa do fluxo."""
+        self.registro_etapas.adicionar(registro.para_dict())
 
     def total(self) -> int:
         """Número de execuções previstas."""
@@ -133,7 +129,7 @@ class Experimento:
         return execucoes
 
     def executar_um(self, caso: CasoTeste, configuracao: ConfiguracaoGeracao, repeticao: int) -> Execucao:
-        """Monta o prompt, chama o LLM, interpreta e avalia um caso numa configuração."""
+        """Passa um caso pelo fluxo numa configuração e avalia o resultado."""
         execucao: Execucao = Execucao(
             identificador=f"{caso.identificador}-{configuracao.nome}-{self.CONDICAO}-r{repeticao}",
             caso=caso.identificador,
@@ -144,26 +140,32 @@ class Experimento:
             parametros=configuracao.parametros(),
             pergunta=caso.pergunta,
         )
-        prompt: PromptMontado = self.montador.montar(caso.pergunta, configuracao)
-        interpretada: RespostaInterpretada | None = None
-        try:
-            resposta: RespostaLLM = self.cliente.gerar(prompt, configuracao)
-            execucao.chamadas = 1
-            execucao.resposta = resposta.texto
-            execucao.latencia_s = round(resposta.latencia_s, 3)
-            execucao.tokens_entrada = resposta.tokens_entrada
-            execucao.tokens_saida = resposta.tokens_saida
-            execucao.tokens_total = resposta.tokens_total
-            execucao.tentativas_extras = resposta.tentativas_extras
-            execucao.motivo_parada = resposta.motivo_parada
-            execucao.modelo = resposta.modelo
-            interpretada = self.interpretador.interpretar(resposta.texto, configuracao.formato)
-            execucao.situacao = interpretada.situacao.value if interpretada.situacao else None
-            execucao.fontes = list(interpretada.fontes)
-            execucao.formato_valido = interpretada.formato_valido
-        except ErroLLM as erro:
-            execucao.chamadas = 1
-            execucao.erro = str(erro)
-        avaliacao: Avaliacao = self.avaliador.avaliar(caso, interpretada, execucao.erro)
+        resultado: ResultadoFluxo = self.fluxo.executar(execucao.identificador, caso.pergunta, configuracao)
+        self.preencher(execucao, resultado)
+        avaliacao: Avaliacao = self.avaliador.avaliar(caso, resultado.interpretada, execucao.erro)
         execucao.avaliacao = asdict(avaliacao)
         return execucao
+
+    @staticmethod
+    def preencher(execucao: Execucao, resultado: ResultadoFluxo) -> None:
+        """Copia para a execução a resposta, as medidas e a situação final do fluxo."""
+        execucao.situacao_final = resultado.situacao_final.value
+        execucao.chamadas = len(resultado.respostas) + (1 if resultado.situacao_final == SituacaoFinal.FALHA_LLM else 0)
+        if resultado.situacao_final in (SituacaoFinal.REJEITADA, SituacaoFinal.FALHA_LLM):
+            execucao.erro = resultado.erro
+        ultima: RespostaLLM | None = resultado.ultima
+        if ultima is not None:
+            execucao.resposta = ultima.texto
+            execucao.motivo_parada = ultima.motivo_parada
+            execucao.modelo = ultima.modelo
+        latencia: float | None = resultado.latencia_s
+        execucao.latencia_s = round(latencia, 3) if latencia is not None else None
+        execucao.tokens_entrada = resultado.soma("tokens_entrada")
+        execucao.tokens_saida = resultado.soma("tokens_saida")
+        execucao.tokens_total = resultado.soma("tokens_total")
+        execucao.tentativas_extras = sum(resposta.tentativas_extras for resposta in resultado.respostas)
+        if resultado.interpretada is not None:
+            situacao: Situacao | None = resultado.interpretada.situacao
+            execucao.situacao = situacao.value if situacao else None
+            execucao.fontes = list(resultado.interpretada.fontes)
+            execucao.formato_valido = resultado.interpretada.formato_valido

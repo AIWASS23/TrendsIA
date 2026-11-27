@@ -18,9 +18,26 @@
       "nome": "C2",
       "descricao": "Saída estruturada (JSON com situação, resposta e fontes); demais parâmetros iguais à C1.",
       "base": "C1",
-      "fator_variado": ["formato"],
+      "fator_variado": [
+        "formato"
+      ],
       "modelo": "gemini-3.5-flash-lite",
       "temperatura": 1.0,
+      "top_p": 0.95,
+      "max_tokens": 1024,
+      "pensamento": "minimal",
+      "formato": "estruturado",
+      "instrucoes": "instrucoes_v1"
+    },
+    {
+      "nome": "C3",
+      "descricao": "Hipótese do Intermediário: temperatura 0,2 aumenta a consistência entre repetições; demais parâmetros iguais à C2.",
+      "base": "C2",
+      "fator_variado": [
+        "temperatura"
+      ],
+      "modelo": "gemini-3.5-flash-lite",
+      "temperatura": 0.2,
       "top_p": 0.95,
       "max_tokens": 1024,
       "pensamento": "minimal",

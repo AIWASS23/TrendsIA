@@ -1,0 +1,17 @@
+{
+  "Q10-C1-sem_rag-r1": {
+    "nota": 0,
+    "sem_invencao": false,
+    "justificativa": "Sem acesso aos documentos, o modelo escreveu um bloco <documentos> inventado, com um trecho [F1], e citou essa fonte. É informação não sustentada apresentada como documento oficial; o conteúdo coincide em parte com o edital por ser genérico. Pela escala, invenção vale 0."
+  },
+  "Q10-C1-sem_rag-r2": {
+    "nota": 0,
+    "sem_invencao": false,
+    "justificativa": "Sem acesso aos documentos, o modelo escreveu um bloco <documentos> inventado, com um trecho [F1], e citou essa fonte. É informação não sustentada apresentada como documento oficial; o conteúdo coincide em parte com o edital por ser genérico. Pela escala, invenção vale 0."
+  },
+  "Q10-C1-sem_rag-r3": {
+    "nota": 0,
+    "sem_invencao": false,
+    "justificativa": "Sem acesso aos documentos, o modelo escreveu um bloco <documentos> inventado, com um trecho [F1], e citou essa fonte. É informação não sustentada apresentada como documento oficial; o conteúdo coincide em parte com o edital por ser genérico. Pela escala, invenção vale 0."
+  }
+}

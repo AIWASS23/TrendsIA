@@ -156,6 +156,7 @@ class Execucao:
     motivo_parada: str | None = None
     modelo: str | None = None
     formato_valido: bool | None = None
+    situacao_final: str | None = None
     erro: str | None = None
     avaliacao: dict[str, Any] | None = None
 
