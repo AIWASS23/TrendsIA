@@ -130,6 +130,8 @@ class Avaliacao:
     fatos_total: int
     observacao: str
     revisada: bool = False
+    fontes_validas: bool = True
+    fonte_coerente: bool | None = None
 
 
 @dataclass
@@ -157,6 +159,11 @@ class Execucao:
     modelo: str | None = None
     formato_valido: bool | None = None
     situacao_final: str | None = None
+    trechos: list[dict[str, Any]] = field(default_factory=list)
+    descartados: list[dict[str, Any]] = field(default_factory=list)
+    contexto_enviado: str | None = None
+    latencia_recuperacao_s: float | None = None
+    chamadas_embedding: int = 0
     erro: str | None = None
     avaliacao: dict[str, Any] | None = None
 
